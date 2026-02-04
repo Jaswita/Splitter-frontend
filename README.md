@@ -1,4 +1,4 @@
-# 🌐 FEDERATE - Decentralized Social Network Platform
+# 🌐 SPLITTER - Decentralized Social Network Platform
 
 A production-ready **React + JavaScript** federated social networking frontend emphasizing decentralized identity (DID), user-owned cryptographic keys, and privacy-first communication.
 
