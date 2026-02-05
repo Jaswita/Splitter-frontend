@@ -51,6 +51,29 @@ export default function AdminPage({ onNavigate, userData, handleLogout }) {
     loadTabData();
   }, [activeTab, page]);
 
+  useEffect(() => {
+    if (searchQuery.length >= 2) {
+      const delaySearch = setTimeout(() => {
+        handleSearchUsers();
+      }, 300); // Debounce search
+      return () => clearTimeout(delaySearch);
+    } else {
+      setSearchResults([]);
+      setShowSearchResults(false);
+    }
+  }, [searchQuery]);
+
+  // Close search results when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (showSearchResults && !e.target.closest('.nav-search') && !e.target.closest('input')) {
+        setShowSearchResults(false);
+      }
+    };
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [showSearchResults]);
+
   /* ================= DATA LOADERS ================= */
 
   const loadTabData = async () => {
@@ -94,11 +117,130 @@ export default function AdminPage({ onNavigate, userData, handleLogout }) {
     setTotalUsers(result.total || 0);
   };
 
+  const handleSearchUsers = async () => {
+    if (searchQuery.length < 2) return;
+    setIsSearching(true);
+    try {
+      const result = await searchApi.searchUsers(searchQuery, 10, 0);
+      setSearchResults(result.users || []);
+      setShowSearchResults(true);
+    } catch (error) {
+      console.error('Failed to search users:', error);
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
   /* ================= HANDLERS ================= */
 
   const handleDeletePost = async (postId) => {
     await postApi.deletePost(postId);
     setPosts(posts.filter(p => p.id !== postId));
+  };
+
+  const handleApproveModeration = async (userId) => {
+    setActionLoading(userId);
+    try {
+      await adminApi.approveModerationRequest(userId);
+      setModerationRequests(moderationRequests.filter(u => u.id !== userId));
+    } catch (error) {
+      console.error('Failed to approve moderation:', error);
+      alert('Failed to approve moderation request');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleRejectModeration = async (userId) => {
+    setActionLoading(userId);
+    try {
+      await adminApi.rejectModerationRequest(userId);
+      setModerationRequests(moderationRequests.filter(u => u.id !== userId));
+    } catch (error) {
+      console.error('Failed to reject moderation:', error);
+      alert('Failed to reject moderation request');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const openBanModal = (user) => {
+    setBanTarget(user);
+    setShowBanModal(true);
+  };
+
+  const handleSuspendUser = async () => {
+    if (!banTarget) return;
+    setActionLoading(banTarget.id);
+    try {
+      if (banReason.trim()) {
+        await adminApi.suspendUserWithReason(banTarget.id, banReason);
+      } else {
+        await adminApi.suspendUser(banTarget.id);
+      }
+      
+      // Update lists
+      setUsers(users.map(u => u.id === banTarget.id ? { ...u, is_suspended: true } : u));
+      setSuspendedUsers([...suspendedUsers, { ...banTarget, is_suspended: true }]);
+      if (searchResults.length > 0) {
+        setSearchResults(searchResults.map(u => u.id === banTarget.id ? { ...u, is_suspended: true } : u));
+      }
+      
+      // Close modal
+      setShowBanModal(false);
+      setBanTarget(null);
+      setBanReason('');
+      
+      // Refresh admin actions
+      fetchAdminActions();
+    } catch (error) {
+      console.error('Failed to suspend user:', error);
+      alert('Failed to suspend user');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleUnsuspendUser = async (userId, username) => {
+    if (!confirm(`Unsuspend @${username}?`)) return;
+    setActionLoading(userId);
+    try {
+      await adminApi.unsuspendUser(userId);
+      
+      // Update lists
+      setUsers(users.map(u => u.id === userId ? { ...u, is_suspended: false } : u));
+      setSuspendedUsers(suspendedUsers.filter(u => u.id !== userId));
+      if (searchResults.length > 0) {
+        setSearchResults(searchResults.map(u => u.id === userId ? { ...u, is_suspended: false } : u));
+      }
+      
+      // Refresh admin actions
+      fetchAdminActions();
+    } catch (error) {
+      console.error('Failed to unsuspend user:', error);
+      alert('Failed to unsuspend user');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleUpdateRole = async (userId, newRole) => {
+    setActionLoading(userId);
+    try {
+      await adminApi.updateUserRole(userId, newRole);
+      
+      // Update lists
+      setUsers(users.map(u => u.id === userId ? { ...u, role: newRole } : u));
+      if (searchResults.length > 0) {
+        setSearchResults(searchResults.map(u => u.id === userId ? { ...u, role: newRole } : u));
+      }
+    } catch (error) {
+      console.error('Failed to update role:', error);
+      alert('Failed to update user role');
+    } finally {
+      setActionLoading(null);
+    }
   };
 
   const formatTimestamp = (iso) => {
