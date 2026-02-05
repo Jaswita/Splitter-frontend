@@ -18,12 +18,12 @@ export default function ModerationPage({ onNavigate, userData }) {
     return (
       <div style={{
         minHeight: '100vh',
-        background: '#0f0f1a',
+        background: 'var(--bg-primary)',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        color: '#fff'
+        color: 'var(--text-primary)'
       }}>
         <h1 style={{ color: '#ff4444', marginBottom: '16px' }}>⛔ Access Denied</h1>
         <p style={{ color: '#666', marginBottom: '24px' }}>You need moderator privileges to access this page.</p>
@@ -124,7 +124,7 @@ export default function ModerationPage({ onNavigate, userData }) {
   });
 
   return (
-    <div className="moderation-container">
+    <div className="moderation-container" style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)', minHeight: '100vh' }}>
       {/* Navigation */}
       <div className="moderation-navbar">
         <button

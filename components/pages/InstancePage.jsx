@@ -171,9 +171,9 @@ export default function InstancePage({ onNavigate }) {
           <button
             className="filter-chip disabled"
             disabled
-            title="Reputation filtering - Sprint 3"
+            title="Reputation filtering - Sprint 2"
           >
-            ⭐ Reputation (Sprint 3)
+            ⭐ Reputation (Sprint 2)
           </button>
 
           <button

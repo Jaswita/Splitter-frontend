@@ -222,9 +222,9 @@ export default function FederationPage({ onNavigate }) {
               📋 Export Activity Log
               <span className="disabled-label">Sprint 2</span>
             </button>
-            <button className="advanced-btn" disabled title="Sprint 3 feature">
+            <button className="advanced-btn" disabled title="Sprint 2 feature">
               📊 Detailed Analytics
-              <span className="disabled-label">Sprint 3</span>
+              <span className="disabled-label">Sprint 2</span>
             </button>
           </div>
         </div>

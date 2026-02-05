@@ -109,6 +109,16 @@ export default function AdminPage({ onNavigate, userData, handleLogout }) {
     return new Date(iso).toLocaleDateString();
   };
 
+  const formatDate = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
   /* ================= UI (UNCHANGED FROM MAIN) ================= */
 
   return (
@@ -292,6 +302,14 @@ export default function AdminPage({ onNavigate, userData, handleLogout }) {
             {isDarkMode ? '🌙' : '☀️'}
           </button>
 
+          <button 
+            onClick={() => onNavigate('home')}
+            className="nav-btn"
+            style={{ fontSize: '14px', fontWeight: 'bold' }}
+          >
+            Exit Dashboard
+          </button>
+
           <button onClick={handleLogout}>Logout</button>
         </div>
       </nav>
@@ -339,10 +357,10 @@ export default function AdminPage({ onNavigate, userData, handleLogout }) {
                       {post.author_avatar || '👤'}
                     </div>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: '600', marginBottom: '4px' }}>
+                      <div style={{ fontWeight: '600', marginBottom: '4px', color: 'var(--text-primary)' }}>
                         {post.author_display_name || post.author_username}
                       </div>
-                      <div style={{ color: '#666', fontSize: '13px' }}>
+                      <div style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>
                         @{post.author_username} · {formatDate(post.created_at)}
                       </div>
                     </div>
@@ -361,7 +379,7 @@ export default function AdminPage({ onNavigate, userData, handleLogout }) {
                       Delete
                     </button>
                   </div>
-                  <p style={{ margin: '0 0 12px 60px', lineHeight: '1.5' }}>
+                  <p style={{ margin: '0 0 12px 60px', lineHeight: '1.5', color: 'var(--text-primary)' }}>
                     {post.content}
                   </p>
                 </article>
@@ -374,26 +392,26 @@ export default function AdminPage({ onNavigate, userData, handleLogout }) {
           {activeTab === 'requests' && (
             <>
               <div className="feed-header">
-                <h2>Moderation Requests</h2>
-                <p style={{ color: '#666', fontSize: '14px' }}>
+                <h2 style={{ color: 'var(--text-primary)' }}>Moderation Requests</h2>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
                   Users requesting moderator privileges ({moderationRequests.length} pending)
                 </p>
               </div>
 
               {isLoading ? (
-                <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
+                <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-secondary)' }}>
                   Loading requests...
                 </div>
               ) : moderationRequests.length === 0 ? (
                 <div style={{
                   textAlign: 'center',
                   padding: '60px',
-                  background: 'rgba(255,255,255,0.02)',
-                  border: '1px solid #333',
+                  background: 'var(--bg-secondary)',
+                  border: '1px solid var(--border-color)',
                   borderRadius: '12px'
                 }}>
-                  <h3 style={{ marginBottom: '8px' }}>No pending requests</h3>
-                  <p style={{ color: '#666' }}>All moderation requests have been processed.</p>
+                  <h3 style={{ marginBottom: '8px', color: 'var(--text-primary)' }}>No pending requests</h3>
+                  <p style={{ color: 'var(--text-secondary)' }}>All moderation requests have been processed.</p>
                 </div>
               ) : (
                 <div style={{ display: 'grid', gap: '16px' }}>
@@ -568,38 +586,38 @@ export default function AdminPage({ onNavigate, userData, handleLogout }) {
 
               {/* Admin Action History */}
               <div>
-                <h3 style={{ marginBottom: '16px', color: '#00d9ff' }}>
+                <h3 style={{ marginBottom: '16px', color: 'var(--primary-cyan)' }}>
                   📜 Recent Admin Actions
                 </h3>
                 {adminActions.length === 0 ? (
                   <div style={{
                     padding: '30px',
-                    background: 'rgba(255,255,255,0.02)',
-                    border: '1px solid #333',
+                    background: 'var(--bg-secondary)',
+                    border: '1px solid var(--border-color)',
                     borderRadius: '12px',
                     textAlign: 'center'
                   }}>
-                    <p style={{ color: '#666' }}>No admin actions recorded yet.</p>
+                    <p style={{ color: 'var(--text-secondary)' }}>No admin actions recorded yet.</p>
                   </div>
                 ) : (
                   <div style={{
-                    background: 'rgba(255,255,255,0.02)',
-                    border: '1px solid #333',
+                    background: 'var(--bg-secondary)',
+                    border: '1px solid var(--border-color)',
                     borderRadius: '12px',
                     overflow: 'hidden'
                   }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                       <thead>
-                        <tr style={{ background: 'rgba(0,0,0,0.3)' }}>
-                          <th style={{ padding: '12px 16px', textAlign: 'left', color: '#888' }}>Action</th>
-                          <th style={{ padding: '12px 16px', textAlign: 'left', color: '#888' }}>Target</th>
-                          <th style={{ padding: '12px 16px', textAlign: 'left', color: '#888' }}>Reason</th>
-                          <th style={{ padding: '12px 16px', textAlign: 'left', color: '#888' }}>Date</th>
+                        <tr style={{ background: 'var(--secondary-navy)' }}>
+                          <th style={{ padding: '12px 16px', textAlign: 'left', color: 'var(--text-secondary)' }}>Action</th>
+                          <th style={{ padding: '12px 16px', textAlign: 'left', color: 'var(--text-secondary)' }}>Target</th>
+                          <th style={{ padding: '12px 16px', textAlign: 'left', color: 'var(--text-secondary)' }}>Reason</th>
+                          <th style={{ padding: '12px 16px', textAlign: 'left', color: 'var(--text-secondary)' }}>Date</th>
                         </tr>
                       </thead>
                       <tbody>
                         {adminActions.map((action, idx) => (
-                          <tr key={idx} style={{ borderTop: '1px solid #333' }}>
+                          <tr key={idx} style={{ borderTop: '1px solid var(--border-color)' }}>
                             <td style={{ padding: '12px 16px' }}>
                               <span style={{
                                 padding: '4px 8px',
@@ -611,9 +629,9 @@ export default function AdminPage({ onNavigate, userData, handleLogout }) {
                                 {action.action_type}
                               </span>
                             </td>
-                            <td style={{ padding: '12px 16px', color: '#fff' }}>{action.target || 'N/A'}</td>
-                            <td style={{ padding: '12px 16px', color: '#888' }}>{action.reason || '—'}</td>
-                            <td style={{ padding: '12px 16px', color: '#666' }}>{formatDate(action.created_at)}</td>
+                            <td style={{ padding: '12px 16px', color: 'var(--text-primary)' }}>{action.target || 'N/A'}</td>
+                            <td style={{ padding: '12px 16px', color: 'var(--text-secondary)' }}>{action.reason || '—'}</td>
+                            <td style={{ padding: '12px 16px', color: 'var(--text-secondary)' }}>{formatDate(action.created_at)}</td>
                           </tr>
                         ))}
                       </tbody>

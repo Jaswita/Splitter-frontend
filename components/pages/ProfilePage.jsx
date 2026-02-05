@@ -210,7 +210,7 @@ export default function ProfilePage({ onNavigate, userData, viewingUserId = null
                   <span className="reputation-text">
                     {profile.reputation}
                     <span className="disabled-tooltip">
-                      ⓘ Reputation scoring enabled in Sprint 3
+                      ⓘ Reputation scoring enabled in Sprint 2
                     </span>
                   </span>
                 </div>

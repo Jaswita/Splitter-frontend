@@ -1,4 +1,4 @@
-# Federate - Complete Implementation Verification
+# Splitter - Complete Implementation Verification
 
 ## ✅ Project Completion Status
 
@@ -12,7 +12,7 @@
 - [x] Created: LandingPage.jsx
 - [x] Styled: LandingPage.css
 - [x] Features:
-  - [x] Hero section with gradient text "FEDERATE"
+  - [x] Hero section with gradient text "SPLITTER"
   - [x] 4-step federation explanation
   - [x] Feature cards
   - [x] CTA "Get Started" button

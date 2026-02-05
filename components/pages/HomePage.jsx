@@ -84,9 +84,9 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
     fetchPosts();
   }, [activeTab]);
 
-  // Fetch current user's following list on mount
+  // Fetch current user's following list and update counts on mount
   useEffect(() => {
-    const loadFollowingList = async () => {
+    const loadFollowingListAndCounts = async () => {
       if (!userData?.id) return;
 
       try {
@@ -99,12 +99,25 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
         );
         setFollowingUsers(followingIds);
         console.log('Loaded following list:', followingIds);
+
+        // Fetch and update follower/following counts
+        try {
+          const stats = await followApi.getFollowStats(userData.id);
+          if (updateUserData) {
+            updateUserData({
+              followers: stats.followers || 0,
+              following: stats.following || 0
+            });
+          }
+        } catch (statsErr) {
+          console.error('Failed to load follow stats:', statsErr);
+        }
       } catch (err) {
         console.error('Failed to load following list:', err);
       }
     };
 
-    loadFollowingList();
+    loadFollowingListAndCounts();
   }, [userData?.id]);
 
   // Search users
@@ -675,7 +688,7 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
                 <p className="profile-name">{userData.displayName}</p>
                 <p className="profile-handle">@{userData.username}@{userData.server}</p>
                 <p className="profile-stats">
-                  <strong>{userData.following}</strong> Following • <strong>{userData.followers}</strong> Followers
+                  <strong>{userData.following || 0}</strong> Following • <strong>{userData.followers || 0}</strong> Followers
                 </p>
               </div>
               <button
@@ -1241,9 +1254,9 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
               <li>E2E Encrypted DMs - Sprint 2</li>
               <li>Media Upload UI - Sprint 2</li>
               <li>Content Reporting - Sprint 2</li>
-              <li>Hashtag Support - Sprint 3</li>
-              <li>Trending Topics - Sprint 3</li>
-              <li>Mobile PWA - Sprint 3</li>
+              <li>Hashtag Support - Sprint 2</li>
+              <li>Trending Topics - Sprint 2</li>
+              <li>Mobile PWA - Sprint 2</li>
             </ul>
           </div>
         </aside>

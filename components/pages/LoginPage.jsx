@@ -93,7 +93,7 @@ export default function LoginPage({ onNavigate, updateUserData, setIsAuthenticat
       setSuccess(true);
       // Use requestAnimationFrame to ensure state updates complete before navigation
       requestAnimationFrame(() => {
-        onNavigate(user.role === 'admin' ? 'admin' : 'home');
+        onNavigate('home');
       });
 
     } catch (err) {

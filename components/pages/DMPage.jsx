@@ -410,7 +410,7 @@ export default function DMPage({ onNavigate, userData, selectedUser }) {
                 <button className="feature-button disabled" disabled>
                   🔄 Multi-device Sync
                 </button>
-                <span className="feature-tooltip">Sprint 3</span>
+                <span className="feature-tooltip">Sprint 2</span>
               </div>
             </>
           )}

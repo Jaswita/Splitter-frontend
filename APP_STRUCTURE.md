@@ -1,9 +1,9 @@
-# Federate - App Structure & Navigation Guide
+# Splitter - App Structure & Navigation Guide
 
 ## 📊 Complete Application Architecture
 
 ```
-FEDERATE APP (Single Page Application)
+SPLITTER APP (Single Page Application)
 │
 ├─ Single HTML div
 ├─ Single React App Component (app/page.tsx)

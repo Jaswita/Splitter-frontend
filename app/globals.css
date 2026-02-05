@@ -5,6 +5,48 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
+  /* Light Mode (Smooth Peach) */
+  --background: #fff0e6;
+  --foreground: #0b3d3b;
+  --card: #fffaf5;
+  --card-foreground: #0b3d3b;
+  --popover: #fffaf5;
+  --popover-foreground: #0b3d3b;
+  --primary: #0f7c7b;
+  --primary-foreground: #ffffff;
+  --secondary: #fcf2ec;
+  --secondary-foreground: #0b3d3b;
+  --muted: #f1f5f9;
+  --muted-foreground: #4c7f7d;
+  --accent: #ff9a8b;
+  --accent-foreground: #0f0f1a;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --border: rgba(30, 41, 59, 0.08);
+  --input: rgba(30, 41, 59, 0.08);
+  --ring: #0f7c7b;
+  --radius: 0.625rem;
+  --disabled: #d4af37;
+  
+  /* Charts */
+  --chart-1: #0f7c7b;
+  --chart-2: #ff9a8b;
+  --chart-3: #22c55e;
+  --chart-4: #8a2be2;
+  --chart-5: #ffd700;
+
+  /* Sidebar */
+  --sidebar: #fffaf5;
+  --sidebar-foreground: #0b3d3b;
+  --sidebar-primary: #0f7c7b;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #ff9a8b;
+  --sidebar-accent-foreground: #0f0f1a;
+  --sidebar-border: rgba(30, 41, 59, 0.08);
+  --sidebar-ring: #0f7c7b;
+}
+
+[data-theme="dark"] {
   /* Dark Mode First Theme - Charcoal, Deep Navy, Neon Accents */
   --background: #0f0f1a;
   --foreground: #e8eaed;

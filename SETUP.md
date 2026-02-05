@@ -1,8 +1,8 @@
-# Federate - Complete Setup & Installation Guide
+# Splitter - Complete Setup & Installation Guide
 
 ## Overview
 
-Federate is a **Sprint 1 Complete** decentralized social networking platform with privacy-first, federated identity management. All **11 pages** are fully working with the dark mode theme.
+Splitter is a **Sprint 1 Complete** decentralized social networking platform with privacy-first, federated identity management. All **11 pages** are fully working with the dark mode theme.
 
 ---
 

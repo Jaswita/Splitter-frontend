@@ -90,7 +90,9 @@ export default function App() {
   const navigateTo = (page: string, params?: any) => {
     // Redirect to login if trying to access protected pages without auth
     const protectedPages = ['home', 'profile', 'dm', 'security', 'moderation', 'federation', 'thread', 'admin'];
-    if (protectedPages.includes(page) && !isAuthenticated) {
+    const hasToken = typeof window !== 'undefined' && localStorage.getItem('jwt_token');
+
+    if (protectedPages.includes(page) && !isAuthenticated && !hasToken) {
       setCurrentPage('login');
       return;
     }
