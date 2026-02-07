@@ -228,6 +228,20 @@ export const postApi = {
       headers: getAuthHeaders()
     });
     return handleResponse<{ message: string }>(response);
+  },
+
+  async getReplies(postId: string) {
+    const response = await fetch(`${API_BASE}/posts/${postId}/replies`);
+    return handleResponse<any[]>(response);
+  },
+
+  async createReply(postId: string, content: string, parentId?: string) {
+    const response = await fetch(`${API_BASE}/posts/${postId}/replies`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ post_id: postId, content, parent_id: parentId || null })
+    });
+    return handleResponse<any>(response);
   }
 };
 

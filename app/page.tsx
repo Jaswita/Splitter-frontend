@@ -38,6 +38,7 @@ export default function App() {
   });
   const [viewingUserId, setViewingUserId] = useState(null);
   const [selectedDMUser, setSelectedDMUser] = useState(null);
+  const [selectedThreadPostId, setSelectedThreadPostId] = useState(null);
 
   // Check backend connection and auth state on mount
   useEffect(() => {
@@ -105,6 +106,10 @@ export default function App() {
       // Handle profile navigation with userId
       setViewingUserId(params.userId);
       setSelectedDMUser(null);
+    } else if (page === 'thread' && params?.postId) {
+      setSelectedThreadPostId(params.postId);
+      setSelectedDMUser(null);
+      setViewingUserId(null);
     } else {
       setSelectedDMUser(null);
       setViewingUserId(null);
@@ -185,7 +190,7 @@ export default function App() {
       {currentPage === 'login' && <LoginPage {...sharedProps} />}
       {currentPage === 'home' && <HomePage {...sharedProps} />}
       {currentPage === 'profile' && <ProfilePage {...sharedProps} viewingUserId={viewingUserId} />}
-      {currentPage === 'thread' && <ThreadPage {...sharedProps} />}
+      {currentPage === 'thread' && <ThreadPage {...sharedProps} postId={selectedThreadPostId} />}
       {currentPage === 'dm' && <DMPage {...sharedProps} userData={userData} selectedUser={selectedDMUser} />}
       {currentPage === 'security' && <SecurityPage {...sharedProps} />}
       {currentPage === 'moderation' && <ModerationPage {...sharedProps} />}
