@@ -62,10 +62,54 @@ export default function SecurityPage({ onNavigate, userData, updateUserData }) {
           ← Back
         </button>
         <h1 className="navbar-title">Security Dashboard</h1>
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: '10px' }}>
-          <button onClick={() => onNavigate('profile')} style={{ padding: '8px 12px', background: 'var(--bg-tertiary)', border: '1px solid var(--primary-cyan)', color: 'var(--primary-cyan)', borderRadius: '6px', cursor: 'pointer' }}>Profile</button>
-          <button onClick={() => onNavigate('dm')} style={{ padding: '8px 12px', background: 'var(--bg-tertiary)', border: '1px solid var(--primary-cyan)', color: 'var(--primary-cyan)', borderRadius: '6px', cursor: 'pointer' }}>💬 Messages</button>
-          <button onClick={toggleTheme} style={{ padding: '8px 12px', background: 'var(--bg-tertiary)', border: '1px solid var(--primary-cyan)', color: 'var(--primary-cyan)', borderRadius: '6px', cursor: 'pointer' }}>{isDarkMode ? '🌙' : '☀️'}</button>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <button
+            className="nav-btn-profile"
+            onClick={() => onNavigate('profile')}
+            style={{
+              padding: '8px 12px',
+              background: isDarkMode ? 'rgba(0, 217, 255, 0.1)' : 'rgba(100, 100, 100, 0.1)',
+              border: `1px solid ${isDarkMode ? '#00d9ff' : '#666'}`,
+              color: isDarkMode ? '#00d9ff' : '#333',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: '500'
+            }}
+          >
+            Profile
+          </button>
+          <button
+            className="nav-btn-profile"
+            onClick={() => onNavigate('dm')}
+            style={{
+              padding: '8px 12px',
+              background: isDarkMode ? 'rgba(0, 217, 255, 0.1)' : 'rgba(100, 100, 100, 0.1)',
+              border: `1px solid ${isDarkMode ? '#00d9ff' : '#666'}`,
+              color: isDarkMode ? '#00d9ff' : '#333',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: '500'
+            }}
+          >
+            💬 Messages
+          </button>
+          <button
+            className="nav-btn-profile"
+            onClick={toggleTheme}
+            title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+            style={{
+              padding: '8px 12px',
+              background: isDarkMode ? 'rgba(0, 217, 255, 0.1)' : 'rgba(100, 100, 100, 0.1)',
+              border: `1px solid ${isDarkMode ? '#00d9ff' : '#666'}`,
+              color: isDarkMode ? '#00d9ff' : '#333',
+              borderRadius: '6px',
+              cursor: 'pointer'
+            }}
+          >
+            {isDarkMode ? '🌞' : '🌙'}
+          </button>
         </div>
       </div>
 
