@@ -301,7 +301,7 @@ export default function DMPage({ onNavigate, userData, selectedUser }) {
                         {thread.unread_count}
                       </div>
                     )}
-                    <div className="encryption-badge">🔒</div>
+                    <div className="encryption-badge" title="End-to-end encrypted conversation">🔒</div>
                   </div>
                 );
               })
@@ -396,6 +396,7 @@ export default function DMPage({ onNavigate, userData, selectedUser }) {
                   className="send-button"
                   onClick={handleSendMessage}
                   disabled={!messageText.trim() || isSending}
+                  title="Send encrypted message"
                 >
                   {isSending ? 'Sending...' : 'Send 🔒'}
                 </button>

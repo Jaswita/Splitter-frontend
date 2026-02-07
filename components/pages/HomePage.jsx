@@ -433,18 +433,21 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
           <button
             className={`nav-item ${activeTab === 'home' ? 'active' : ''}`}
             onClick={() => setActiveTab('home')}
+            title="Show all posts (local + federated)"
           >
             Home
           </button>
           <button
             className={`nav-item ${activeTab === 'local' ? 'active' : ''}`}
             onClick={() => setActiveTab('local')}
+            title="Show only posts from your local instance"
           >
             Local
           </button>
           <button
             className={`nav-item ${activeTab === 'federated' ? 'active' : ''}`}
             onClick={() => setActiveTab('federated')}
+            title="Show only posts from remote federated instances"
           >
             Federated
           </button>
@@ -812,6 +815,7 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
                   <select
                     value={newPostVisibility}
                     onChange={(e) => setNewPostVisibility(e.target.value)}
+                    title="Choose who can see this post"
                     style={{
                       padding: '4px 8px',
                       background: '#1a1a2e',
@@ -896,8 +900,8 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
                       <div className="post-name-line">
                         <strong>{post.displayName}</strong>
                         <span className="post-handle">{post.handle}</span>
-                        {post.local && <span className="post-badge local">Local</span>}
-                        {!post.local && <span className="post-badge remote">🌐 Remote</span>}
+                        {post.local && <span className="post-badge local" title="This post is from your local instance (localhost)">Local</span>}
+                        {!post.local && <span className="post-badge remote" title="This post is from a remote federated instance">🌐 Remote</span>}
                         {/* Edited Badge */}
                         {isEdited(post) && (
                           <span
@@ -913,7 +917,11 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
                     </div>
                   </div>
                   {post.visibility && post.visibility !== 'public' && (
-                    <span className="post-visibility" style={{ color: '#888', fontSize: '12px' }}>
+                    <span 
+                      className="post-visibility" 
+                      style={{ color: '#888', fontSize: '12px', cursor: 'help' }}
+                      title={post.visibility === 'followers' ? 'Only followers can see this post' : 'Only close circle can see this post'}
+                    >
                       {getVisibilityIcon(post.visibility)} {post.visibility === 'followers' ? 'Followers Only' : 'Circle Only'}
                     </span>
                   )}
@@ -1041,6 +1049,7 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
                   <button
                     className="post-action"
                     onClick={() => onNavigate('thread')}
+                    title="Reply to this post"
                   >
                     <span className="action-icon">💬</span>
                     <span className="action-count">{post.replies}</span>
@@ -1049,6 +1058,7 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
                     className={`post-action ${post.reposted ? 'active' : ''}`}
                     onClick={() => handleRepost(post.id)}
                     style={post.reposted ? { color: '#00d9ff' } : {}}
+                    title={post.reposted ? 'Undo repost' : 'Repost to your followers'}
                   >
                     <span className="action-icon">🚀</span>
                     <span className="action-count">{post.boosts}</span>
@@ -1057,6 +1067,7 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
                     className={`post-action ${post.liked ? 'active' : ''}`}
                     onClick={() => handleLike(post.id)}
                     style={post.liked ? { color: '#ff4444' } : {}}
+                    title={post.liked ? 'Unlike' : 'Like this post'}
                   >
                     <span className="action-icon">{post.liked ? '❤️' : '🤍'}</span>
                     <span className="action-count">{post.likes}</span>

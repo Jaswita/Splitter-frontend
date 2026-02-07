@@ -300,15 +300,15 @@ export default function ProfilePage({ onNavigate, userData, viewingUserId = null
                 >
                   <div className="post-badges">
                     {post.is_remote ? (
-                      <span className="federated-badge">🌐 Remote</span>
+                      <span className="federated-badge" title="This post is from a remote federated instance">🌐 Remote</span>
                     ) : (
-                      <span className="local-badge">Local</span>
+                      <span className="local-badge" title="This post is from your local instance (localhost)">Local</span>
                     )}
                     {post.visibility === 'followers' && (
-                      <span className="followers-badge">👥 Followers Only</span>
+                      <span className="followers-badge" title="Only followers can see this post">👥 Followers Only</span>
                     )}
                     {post.visibility === 'circle' && (
-                      <span className="followers-badge">🔒 Circle</span>
+                      <span className="followers-badge" title="Only close circle can see this post">🔒 Circle</span>
                     )}
                   </div>
                   <div className="post-content">{post.content}</div>

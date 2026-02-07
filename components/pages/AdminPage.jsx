@@ -927,7 +927,9 @@ export default function AdminPage({ onNavigate, userData, handleLogout }) {
                               </div>
                             </td>
                             <td style={{ padding: '16px' }}>
-                              <span style={{
+                              <span 
+                                title={user.role === 'admin' ? 'Admin - Full system access' : user.role === 'moderator' ? 'Moderator - Can moderate content' : 'User - Regular user account'}
+                                style={{
                                 padding: '4px 8px',
                                 borderRadius: '4px',
                                 fontSize: '12px',
@@ -935,16 +937,17 @@ export default function AdminPage({ onNavigate, userData, handleLogout }) {
                                 background: user.role === 'admin' ? 'rgba(255,68,68,0.2)' :
                                            user.role === 'moderator' ? 'rgba(0,217,255,0.2)' : 'rgba(0,255,136,0.2)',
                                 color: user.role === 'admin' ? '#ff4444' :
-                                       user.role === 'moderator' ? '#00d9ff' : '#00ff88'
+                                       user.role === 'moderator' ? '#00d9ff' : '#00ff88',
+                                cursor: 'help'
                               }}>
                                 {user.role === 'admin' ? '👑' : user.role === 'moderator' ? '🛡️' : '👤'} {user.role}
                               </span>
                             </td>
                             <td style={{ padding: '16px' }}>
                               {user.is_suspended ? (
-                                <span style={{ color: '#ff4444' }}>Suspended</span>
+                                <span style={{ color: '#ff4444' }} title="This user is currently suspended">Suspended</span>
                               ) : (
-                                <span style={{ color: '#00ff88' }}>✓ Active</span>
+                                <span style={{ color: '#00ff88' }} title="This user account is active">✓ Active</span>
                               )}
                             </td>
                             <td style={{ padding: '16px', color: '#888' }}>{formatDate(user.created_at)}</td>

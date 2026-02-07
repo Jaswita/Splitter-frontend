@@ -180,12 +180,14 @@ export default function ThreadPage({ onNavigate }) {
                 <button
                   className={`action-button ${reply.isFederated ? 'disabled' : ''}`}
                   disabled={reply.isFederated}
+                  title={reply.isFederated ? 'Cross-server interaction federation enabled in Sprint 2' : 'Repost to your followers'}
                 >
                   🔄 {reply.boosts}
                 </button>
                 <button
                   className={`action-button ${reply.isFederated ? 'disabled' : ''}`}
                   disabled={reply.isFederated}
+                  title={reply.isFederated ? 'Cross-server interaction federation enabled in Sprint 2' : 'Reply to this post'}
                 >
                   💬 {reply.replies}
                 </button>
