@@ -210,9 +210,9 @@ export default function SecurityPage({ onNavigate, userData, updateUserData }) {
               disabled={isSaving}
               style={{
                 padding: '12px 24px',
-                background: 'linear-gradient(135deg, #00d9ff, #00ff88)',
+                background: 'var(--accent-gradient)',
                 border: 'none',
-                color: '#000',
+                color: isDarkMode ? '#000' : '#fff',
                 borderRadius: '8px',
                 cursor: isSaving ? 'not-allowed' : 'pointer',
                 fontWeight: '600',
@@ -334,7 +334,7 @@ export default function SecurityPage({ onNavigate, userData, updateUserData }) {
             <button
               className="action-btn primary"
               onClick={() => alert('Recovery file would download: recovery_' + Date.now() + '.json')}
-              style={{ background: 'var(--accent-gradient)', color: isDarkMode ? '#000' : '#fff' }}
+              style={{ background: 'var(--accent-gradient)', color: isDarkMode ? '#000' : '#fff', border: 'none' }}
             >
               📥 Export Recovery File
             </button>

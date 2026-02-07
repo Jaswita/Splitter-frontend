@@ -87,17 +87,83 @@ export default function FederationPage({ onNavigate }) {
           ← Back
         </button>
         <h1 className="navbar-title">Federation Inspector</h1>
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: '10px' }}>
-          <button onClick={() => onNavigate('moderation')} style={{ padding: '8px 12px', background: 'rgba(255,0,110,0.1)', border: '1px solid #ff006e', color: '#ff006e', borderRadius: '6px', cursor: 'pointer' }}>📋 Moderation</button>
-          <button onClick={() => onNavigate('profile')} style={{ padding: '8px 12px', background: 'rgba(0,217,255,0.1)', border: '1px solid #00d9ff', color: '#00d9ff', borderRadius: '6px', cursor: 'pointer' }}>Profile</button>
-          <button onClick={toggleTheme} style={{ padding: '8px 12px', background: 'rgba(0,217,255,0.1)', border: '1px solid #00d9ff', color: '#00d9ff', borderRadius: '6px', cursor: 'pointer' }}>{isDarkMode ? '🌙' : '☀️'}</button>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <button
+            className="nav-btn-profile"
+            onClick={() => onNavigate('moderation')}
+            style={{
+              padding: '8px 12px',
+              background: 'rgba(255, 68, 68, 0.1)',
+              border: '1px solid #ff4444',
+              color: '#ff4444',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: '500'
+            }}
+          >
+            📋 Moderation
+          </button>
+          <button
+            className="nav-btn-profile"
+            onClick={() => onNavigate('profile')}
+            style={{
+              padding: '8px 12px',
+              background: isDarkMode ? 'rgba(0, 217, 255, 0.1)' : 'rgba(100, 100, 100, 0.1)',
+              border: `1px solid ${isDarkMode ? '#00d9ff' : '#666'}`,
+              color: isDarkMode ? '#00d9ff' : '#333',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: '500'
+            }}
+          >
+            Profile
+          </button>
+          <button
+            className="nav-btn-profile"
+            onClick={toggleTheme}
+            title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+            style={{
+              padding: '8px 12px',
+              background: isDarkMode ? 'rgba(0, 217, 255, 0.1)' : 'rgba(100, 100, 100, 0.1)',
+              border: `1px solid ${isDarkMode ? '#00d9ff' : '#666'}`,
+              color: isDarkMode ? '#00d9ff' : '#333',
+              borderRadius: '6px',
+              cursor: 'pointer'
+            }}
+          >
+            {isDarkMode ? '🌞' : '🌙'}
+          </button>
         </div>
       </div>
 
       <div className="federation-content">
+        {/* Demo/Stub Warning Banner */}
+        <div style={{
+          background: 'rgba(255, 193, 7, 0.1)',
+          border: '2px dashed var(--disabled-yellow)',
+          borderRadius: '12px',
+          padding: '20px',
+          marginBottom: '32px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '16px'
+        }}>
+          <div style={{ fontSize: '32px' }}>⚠️</div>
+          <div>
+            <h3 style={{ margin: '0 0 8px 0', color: 'var(--disabled-yellow)', fontSize: '16px', fontWeight: '700' }}>
+              Demo Visualization Only
+            </h3>
+            <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '14px', lineHeight: '1.6' }}>
+              This page displays <strong>stub/placeholder data</strong> for demonstration purposes. Federation functionality (ActivityPub protocol, inbox/outbox activities) is planned for <strong>Sprint 2+</strong>. All metrics, server connections, and activity data shown here are simulated.
+            </p>
+          </div>
+        </div>
+
         {/* Health Metrics */}
         <div className="health-section">
-          <h2 className="section-title">Federation Health</h2>
+          <h2 className="section-title">Federation Health <span style={{ fontSize: '12px', color: 'var(--disabled-yellow)', fontWeight: 'normal' }}>(Stub Data)</span></h2>
 
           <div className="metrics-grid">
             <div className="metric-card">
@@ -136,7 +202,7 @@ export default function FederationPage({ onNavigate }) {
 
         {/* Activity Chart (Visualization) */}
         <div className="activity-chart">
-          <h3>Activity Over Time</h3>
+          <h3>Activity Over Time <span style={{ fontSize: '11px', color: 'var(--disabled-yellow)', fontWeight: 'normal' }}>(Stub Visualization)</span></h3>
           <div className="chart-placeholder">
             <div className="chart-bar" style={{ height: '60%' }}></div>
             <div className="chart-bar" style={{ height: '75%' }}></div>
@@ -153,7 +219,7 @@ export default function FederationPage({ onNavigate }) {
 
         {/* Connected Servers Table */}
         <div className="servers-section">
-          <h2 className="section-title">Connected Servers</h2>
+          <h2 className="section-title">Connected Servers <span style={{ fontSize: '12px', color: 'var(--disabled-yellow)', fontWeight: 'normal' }}>(Demo Data)</span></h2>
 
           <div className="servers-table">
             <div className="table-header">

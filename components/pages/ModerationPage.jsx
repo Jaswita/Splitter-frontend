@@ -134,14 +134,80 @@ export default function ModerationPage({ onNavigate, userData }) {
           ← Back
         </button>
         <h1 className="navbar-title">Moderation Panel</h1>
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: '10px' }}>
-          <button onClick={() => onNavigate('federation')} style={{ padding: '8px 12px', background: 'rgba(255,0,110,0.1)', border: '1px solid #ff006e', color: '#ff006e', borderRadius: '6px', cursor: 'pointer' }}>🌐 Federation</button>
-          <button onClick={() => onNavigate('profile')} style={{ padding: '8px 12px', background: 'rgba(0,217,255,0.1)', border: '1px solid #00d9ff', color: '#00d9ff', borderRadius: '6px', cursor: 'pointer' }}>Profile</button>
-          <button onClick={toggleTheme} style={{ padding: '8px 12px', background: 'rgba(0,217,255,0.1)', border: '1px solid #00d9ff', color: '#00d9ff', borderRadius: '6px', cursor: 'pointer' }}>{isDarkMode ? '🌙' : '☀️'}</button>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <button
+            className="nav-btn-profile"
+            onClick={() => onNavigate('federation')}
+            style={{
+              padding: '8px 12px',
+              background: 'rgba(255, 68, 68, 0.1)',
+              border: '1px solid #ff4444',
+              color: '#ff4444',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: '500'
+            }}
+          >
+            🌐 Federation
+          </button>
+          <button
+            className="nav-btn-profile"
+            onClick={() => onNavigate('profile')}
+            style={{
+              padding: '8px 12px',
+              background: isDarkMode ? 'rgba(0, 217, 255, 0.1)' : 'rgba(100, 100, 100, 0.1)',
+              border: `1px solid ${isDarkMode ? '#00d9ff' : '#666'}`,
+              color: isDarkMode ? '#00d9ff' : '#333',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: '500'
+            }}
+          >
+            Profile
+          </button>
+          <button
+            className="nav-btn-profile"
+            onClick={toggleTheme}
+            title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+            style={{
+              padding: '8px 12px',
+              background: isDarkMode ? 'rgba(0, 217, 255, 0.1)' : 'rgba(100, 100, 100, 0.1)',
+              border: `1px solid ${isDarkMode ? '#00d9ff' : '#666'}`,
+              color: isDarkMode ? '#00d9ff' : '#333',
+              borderRadius: '6px',
+              cursor: 'pointer'
+            }}
+          >
+            {isDarkMode ? '🌞' : '🌙'}
+          </button>
         </div>
       </div>
 
       <div className="moderation-content">
+        {/* Stub Warning Banner */}
+        <div style={{
+          background: 'rgba(255, 193, 7, 0.1)',
+          border: '2px dashed var(--disabled-yellow)',
+          borderRadius: '12px',
+          padding: '20px',
+          marginBottom: '32px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '16px'
+        }}>
+          <div style={{ fontSize: '32px' }}>⚠️</div>
+          <div>
+            <h3 style={{ margin: '0 0 8px 0', color: 'var(--disabled-yellow)', fontSize: '16px', fontWeight: '700' }}>
+              Content Moderation Queue - Stub Feature
+            </h3>
+            <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '14px', lineHeight: '1.6' }}>
+              This page is a <strong>placeholder/stub</strong> for Sprint 2+. The content moderation queue system (user reports, flagged content, spam detection) is not yet implemented. All data and actions shown below are for demonstration purposes only.
+            </p>
+          </div>
+        </div>
+
         {/* Header Section */}
         <div className="moderation-header">
           <div className="header-info">
