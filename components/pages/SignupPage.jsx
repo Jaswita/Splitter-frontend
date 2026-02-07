@@ -333,14 +333,14 @@ export default function SignupPage({ onNavigate, updateUserData, setIsAuthentica
         {step === 1 && (
           <div className="signup-form">
             <h2 className="step-title">Select Your Server 🧭</h2>
-            <p style={{ color: '#888', marginBottom: '16px', fontSize: '14px' }}>
+            <p style={{ color: isDarkMode ? '#888' : '#555', marginBottom: '16px', fontSize: '14px' }}>
               Choose a federated server aligned with your interests and region
             </p>
 
             {/* Search & Filter */}
             <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}>
               <div style={{ flex: 1, minWidth: '200px', position: 'relative' }}>
-                <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#666' }}>🔍</span>
+                <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: isDarkMode ? '#666' : '#999' }}>🔍</span>
                 <input
                   type="text"
                   placeholder="Search servers..."
@@ -349,10 +349,10 @@ export default function SignupPage({ onNavigate, updateUserData, setIsAuthentica
                   style={{
                     width: '100%',
                     padding: '12px 12px 12px 40px',
-                    background: 'rgba(255,255,255,0.05)',
-                    border: '1px solid #333',
+                    background: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
+                    border: isDarkMode ? '1px solid #333' : '1px solid #ddd',
                     borderRadius: '8px',
-                    color: '#fff',
+                    color: isDarkMode ? '#fff' : '#333',
                     fontSize: '14px'
                   }}
                 />
@@ -362,16 +362,16 @@ export default function SignupPage({ onNavigate, updateUserData, setIsAuthentica
                 onChange={(e) => setSelectedRegion(e.target.value)}
                 style={{
                   padding: '12px 16px',
-                  background: 'rgba(255,255,255,0.05)',
-                  border: '1px solid #333',
+                  background: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
+                  border: isDarkMode ? '1px solid #333' : '1px solid #ddd',
                   borderRadius: '8px',
-                  color: '#fff',
+                  color: isDarkMode ? '#fff' : '#333',
                   fontSize: '14px',
                   minWidth: '150px'
                 }}
               >
                 {REGIONS.map(region => (
-                  <option key={region} value={region} style={{ background: '#1a1a2e' }}>{region}</option>
+                  <option key={region} value={region} style={{ background: isDarkMode ? '#1a1a2e' : '#fff', color: isDarkMode ? '#fff' : '#333' }}>{region}</option>
                 ))}
               </select>
             </div>
@@ -392,10 +392,10 @@ export default function SignupPage({ onNavigate, updateUserData, setIsAuthentica
                   style={{
                     background: formData.server === server.name
                       ? 'linear-gradient(135deg, rgba(0, 217, 255, 0.2), rgba(0, 255, 136, 0.1))'
-                      : 'rgba(255,255,255,0.03)',
+                      : isDarkMode ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
                     border: formData.server === server.name
                       ? '2px solid #00d9ff'
-                      : '1px solid #333',
+                      : isDarkMode ? '1px solid #333' : '1px solid #ddd',
                     borderRadius: '12px',
                     padding: '16px',
                     cursor: 'pointer',
@@ -425,7 +425,7 @@ export default function SignupPage({ onNavigate, updateUserData, setIsAuthentica
                     <span style={{ fontSize: '20px' }}>
                       {server.reputation === 'trusted' ? '🟢' : server.reputation === 'dev' ? '🔧' : '🟡'}
                     </span>
-                    <h3 style={{ margin: 0, color: '#fff', fontSize: '16px', fontWeight: '600' }}>
+                    <h3 style={{ margin: 0, color: isDarkMode ? '#fff' : '#000', fontSize: '16px', fontWeight: '600' }}>
                       {server.name}
                     </h3>
                   </div>
@@ -450,7 +450,7 @@ export default function SignupPage({ onNavigate, updateUserData, setIsAuthentica
                   </div>
 
                   {/* Description */}
-                  <p style={{ color: '#888', fontSize: '12px', margin: '8px 0', lineHeight: '1.4' }}>
+                  <p style={{ color: isDarkMode ? '#888' : '#555', fontSize: '12px', margin: '8px 0', lineHeight: '1.4' }}>
                     {server.description}
                   </p>
 
@@ -461,22 +461,22 @@ export default function SignupPage({ onNavigate, updateUserData, setIsAuthentica
                     gap: '8px',
                     marginTop: '12px',
                     paddingTop: '12px',
-                    borderTop: '1px solid #333'
+                    borderTop: isDarkMode ? '1px solid #333' : '1px solid #e0e0e0'
                   }}>
                     <div style={{ textAlign: 'center' }}>
-                      <div style={{ color: '#666', fontSize: '10px', textTransform: 'uppercase' }}>Users</div>
-                      <div style={{ color: '#fff', fontSize: '14px', fontWeight: '600' }}>
+                      <div style={{ color: isDarkMode ? '#666' : '#999', fontSize: '10px', textTransform: 'uppercase' }}>Users</div>
+                      <div style={{ color: isDarkMode ? '#fff' : '#000', fontSize: '14px', fontWeight: '600' }}>
                         {server.users.toLocaleString()}
                       </div>
                     </div>
                     <div style={{ textAlign: 'center' }}>
-                      <div style={{ color: '#666', fontSize: '10px', textTransform: 'uppercase' }}>Uptime</div>
+                      <div style={{ color: isDarkMode ? '#666' : '#999', fontSize: '10px', textTransform: 'uppercase' }}>Uptime</div>
                       <div style={{ color: '#00ff88', fontSize: '14px', fontWeight: '600' }}>
                         {server.uptime}
                       </div>
                     </div>
                     <div style={{ textAlign: 'center' }}>
-                      <div style={{ color: '#666', fontSize: '10px', textTransform: 'uppercase' }}>Ping</div>
+                      <div style={{ color: isDarkMode ? '#666' : '#999', fontSize: '10px', textTransform: 'uppercase' }}>Ping</div>
                       <div style={{ color: '#00d9ff', fontSize: '14px', fontWeight: '600' }}>
                         {server.ping}
                       </div>
@@ -509,7 +509,7 @@ export default function SignupPage({ onNavigate, updateUserData, setIsAuthentica
             </div>
 
             {filteredServers.length === 0 && (
-              <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
+              <div style={{ textAlign: 'center', padding: '40px', color: isDarkMode ? '#666' : '#999' }}>
                 <p>No servers found matching your criteria</p>
               </div>
             )}
@@ -581,7 +581,7 @@ export default function SignupPage({ onNavigate, updateUserData, setIsAuthentica
                 <div style={{ marginTop: '8px' }}>
                   <div style={{
                     height: '4px',
-                    background: '#333',
+                    background: isDarkMode ? '#333' : '#e0e0e0',
                     borderRadius: '2px',
                     overflow: 'hidden'
                   }}>
@@ -719,10 +719,10 @@ export default function SignupPage({ onNavigate, updateUserData, setIsAuthentica
                 </div>
 
                 <div className="did-section" style={{ marginBottom: '16px' }}>
-                  <label style={{ color: '#888' }}>Private Key:</label>
+                  <label style={{ color: isDarkMode ? '#888' : '#555' }}>Private Key:</label>
                   <div className="did-box locked" style={{
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    border: '1px solid #444',
+                    background: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+                    border: isDarkMode ? '1px solid #444' : '1px solid #ddd',
                     borderRadius: '8px',
                     padding: '12px',
                     marginTop: '8px',
@@ -896,11 +896,11 @@ export default function SignupPage({ onNavigate, updateUserData, setIsAuthentica
                 fontSize: '40px'
               }}>✓</div>
               <h3 style={{ color: '#00d9ff', marginBottom: '8px' }}>Account Created!</h3>
-              <p style={{ color: '#888' }}>Welcome to Splitter, @{formData.username}</p>
-              <p style={{ color: '#666', marginTop: '8px', fontSize: '14px' }}>
+              <p style={{ color: isDarkMode ? '#888' : '#555' }}>Welcome to Splitter, @{formData.username}</p>
+              <p style={{ color: isDarkMode ? '#666' : '#999', marginTop: '8px', fontSize: '14px' }}>
                 Server: {formData.server}
               </p>
-              <p style={{ color: '#666', marginTop: '16px' }}>Redirecting to login...</p>
+              <p style={{ color: isDarkMode ? '#666' : '#999', marginTop: '16px' }}>Redirecting to login...</p>
             </div>
           </div>
         )}

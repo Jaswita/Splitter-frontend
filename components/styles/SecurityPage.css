@@ -44,6 +44,30 @@
   color: var(--text-primary);
 }
 
+/* Navigation Buttons */
+.security-navbar .nav-btn {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--primary-cyan);
+  color: var(--primary-cyan);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  font-weight: 500;
+  outline: none;
+}
+
+.security-navbar .nav-btn:hover {
+  background: rgba(0, 217, 255, 0.15);
+  box-shadow: 0 0 10px rgba(0, 217, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+.security-navbar .nav-btn:active {
+  transform: translateY(0);
+}
+
 .security-content {
   flex: 1;
   overflow-y: auto;

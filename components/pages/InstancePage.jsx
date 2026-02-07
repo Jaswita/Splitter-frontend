@@ -206,7 +206,11 @@ export default function InstancePage({ onNavigate }) {
                 {server.name}
                 {server.blocked && ' 🛑'}
               </h3>
-              <span className="instance-card-federation">
+              <span 
+                className="instance-card-federation"
+                title={server.federation === 'Open' ? 'This server accepts federation connections from other instances' : 'This server does not accept federation connections'}
+                style={{ cursor: 'help' }}
+              >
                 {server.federation === 'Open' ? '🌐' : '🛑'} {server.federation}
               </span>
             </div>
@@ -225,13 +229,23 @@ export default function InstancePage({ onNavigate }) {
               </div>
               <div className="stat">
                 <span className="stat-label">Moderation</span>
-                <span className="stat-value">{server.moderation}</span>
+                <span 
+                  className="stat-value" 
+                  title={
+                    server.moderation === 'Strict' ? 'Strict moderation: Proactive content review and enforcement' :
+                    server.moderation === 'Moderate' ? 'Moderate moderation: Balanced approach to content policy' :
+                    'Lenient moderation: Minimal intervention, community-driven'
+                  }
+                  style={{ cursor: 'help' }}
+                >
+                  {server.moderation}
+                </span>
               </div>
             </div>
 
             {server.reputation === 'trusted' && (
               <div className="reputation-badge">
-                <span>🟢 Trusted Network</span>
+                <span title="This instance has been verified and is trusted by the network administrators" style={{ cursor: 'help' }}>🟢 Trusted Network</span>
               </div>
             )}
 

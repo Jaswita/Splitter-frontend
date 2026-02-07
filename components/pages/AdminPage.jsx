@@ -79,10 +79,17 @@ export default function AdminPage({ onNavigate, userData, handleLogout }) {
   const loadTabData = async () => {
     setIsLoading(true);
     try {
+      // Load stats for all tabs (sidebar always visible)
+      fetchModerationRequests();
+      fetchSuspendedUsers();
+      if (activeTab !== 'users') {
+        fetchUserCount(); // Get total user count for sidebar
+      }
       if (activeTab === 'home') fetchPosts();
-      if (activeTab === 'requests') fetchModerationRequests();
+      if (activeTab === 'requests') {
+        // Already loaded above
+      }
       if (activeTab === 'bans') {
-        fetchSuspendedUsers();
         fetchAdminActions();
       }
       if (activeTab === 'users') fetchAllUsers();
@@ -115,6 +122,15 @@ export default function AdminPage({ onNavigate, userData, handleLogout }) {
     const result = await adminApi.getAllUsers(50, page * 50);
     setUsers(result.users || []);
     setTotalUsers(result.total || 0);
+  };
+
+  const fetchUserCount = async () => {
+    try {
+      const result = await adminApi.getAllUsers(1, 0); // Just fetch 1 user to get total count
+      setTotalUsers(result.total || 0);
+    } catch (error) {
+      console.error('Failed to fetch user count:', error);
+    }
   };
 
   const handleSearchUsers = async () => {
@@ -270,7 +286,17 @@ export default function AdminPage({ onNavigate, userData, handleLogout }) {
       <nav className="home-nav">
 
         <div className="nav-left">
-          <img src="/logo.png" className="nav-logo-img" />
+          <h1 className="nav-logo" style={{ 
+            fontSize: '1.5rem', 
+            fontWeight: 700, 
+            margin: 0,
+            background: 'linear-gradient(135deg, var(--primary-cyan), var(--accent-magenta))',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text'
+          }}>
+            ⚡ Splitter Admin
+          </h1>
         </div>
 
         <div className="nav-center">
@@ -436,30 +462,83 @@ export default function AdminPage({ onNavigate, userData, handleLogout }) {
               </div>
             )}
           </div>
-          <button 
-            onClick={toggleTheme}
-            className="nav-btn"
-            title="Toggle theme"
-          >
-            {isDarkMode ? '🌙' : '☀️'}
-          </button>
-
-          <button 
+          <button
+            className="nav-btn-profile"
             onClick={() => onNavigate('home')}
-            className="nav-btn"
-            style={{ fontSize: '14px', fontWeight: 'bold' }}
+            title="Exit Dashboard"
+            style={{
+              marginLeft: '10px',
+              padding: '8px 12px',
+              background: isDarkMode ? 'rgba(0, 217, 255, 0.1)' : 'rgba(100, 100, 100, 0.1)',
+              border: `1px solid ${isDarkMode ? '#00d9ff' : '#666'}`,
+              color: isDarkMode ? '#00d9ff' : '#333',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: '500'
+            }}
           >
             Exit Dashboard
           </button>
-
-          <button onClick={handleLogout}>Logout</button>
+          <button
+            className="nav-btn-profile"
+            onClick={toggleTheme}
+            title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+            style={{
+              marginLeft: '10px',
+              padding: '8px 12px',
+              background: isDarkMode ? 'rgba(0, 217, 255, 0.1)' : 'rgba(100, 100, 100, 0.1)',
+              border: `1px solid ${isDarkMode ? '#00d9ff' : '#666'}`,
+              color: isDarkMode ? '#00d9ff' : '#333',
+              borderRadius: '6px',
+              cursor: 'pointer'
+            }}
+          >
+            {isDarkMode ? '🌞' : '🌙'}
+          </button>
+          {handleLogout && (
+            <button
+              className="nav-btn-profile"
+              onClick={handleLogout}
+              title="Logout"
+              style={{
+                marginLeft: '10px',
+                padding: '8px 12px',
+                background: 'rgba(255, 68, 68, 0.1)',
+                border: '1px solid #ff4444',
+                color: '#ff4444',
+                borderRadius: '6px',
+                cursor: 'pointer'
+              }}
+            >
+              <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" height="16" width="16">
+                <path d="M1.728 8c0 0.20793333333333333 0.08259999999999999 0.4074 0.22959999999999997 0.5544 0.14706666666666665 0.147 0.3464666666666667 0.22959999999999997 0.5544 0.22959999999999997h5.9505333333333335L6.6593333333333335 10.579333333333333c-0.07339999999999999 0.07293333333333332 -0.1317333333333333 0.15966666666666665 -0.1716 0.2551333333333333 -0.0398 0.09559999999999999 -0.06026666666666666 0.19806666666666664 -0.06026666666666666 0.3015333333333333s0.020466666666666668 0.20593333333333333 0.06026666666666666 0.3015333333333333c0.03986666666666666 0.09546666666666666 0.09819999999999998 0.18219999999999997 0.1716 0.2551333333333333 0.07293333333333332 0.07346666666666667 0.15966666666666665 0.13179999999999997 0.2551333333333333 0.1716 0.09559999999999999 0.0398 0.19806666666666664 0.06026666666666666 0.3015333333333333 0.06026666666666666s0.20593333333333333 -0.020466666666666668 0.3015333333333333 -0.06026666666666666c0.09546666666666666 -0.0398 0.18219999999999997 -0.09813333333333332 0.2551333333333333 -0.1716l3.1359999999999997 -3.1359999999999997c0.07133333333333333 -0.0746 0.12726666666666664 -0.16246666666666665 0.1646 -0.2587333333333333 0.0784 -0.19093333333333332 0.0784 -0.40493333333333337 0 -0.5958666666666667 -0.03733333333333333 -0.09626666666666667 -0.09326666666666666 -0.18413333333333332 -0.1646 -0.2587333333333333l-3.1359999999999997 -3.1359999999999997c-0.07306666666666667 -0.07306666666666667 -0.15986666666666666 -0.13106666666666666 -0.2554666666666666 -0.1706 -0.09546666666666666 -0.039599999999999996 -0.1978 -0.059933333333333325 -0.30119999999999997 -0.059933333333333325 -0.10339999999999999 0 -0.20573333333333332 0.02033333333333333 -0.30119999999999997 0.059933333333333325 -0.09559999999999999 0.03953333333333333 -0.1824 0.09753333333333333 -0.2554666666666666 0.1706 -0.07306666666666667 0.07313333333333333 -0.13106666666666666 0.15993333333333332 -0.17066666666666666 0.25539999999999996 -0.039466666666666664 0.09553333333333333 -0.059866666666666665 0.19786666666666666 -0.059866666666666665 0.3012666666666667 0 0.10339999999999999 0.020399999999999998 0.20573333333333332 0.059866666666666665 0.3012666666666667 0.039599999999999996 0.09546666666666666 0.09759999999999999 0.18226666666666663 0.17066666666666666 0.25539999999999996l1.8032 1.7953333333333332H2.5119999999999996c-0.20793333333333333 0 -0.4073333333333333 0.08266666666666667 -0.5544 0.22966666666666663 -0.147 0.147 -0.22959999999999997 0.34639999999999993 -0.22959999999999997 0.5543333333333333ZM11.919999999999998 0.15999999999999998H4.08c-0.6237999999999999 0 -1.222 0.24779999999999996 -1.6631333333333331 0.6888666666666667 -0.4410666666666666 0.44113333333333327 -0.6888666666666667 1.0393333333333332 -0.6888666666666667 1.6631333333333331v2.352c0 0.20793333333333333 0.08259999999999999 0.4073333333333333 0.22959999999999997 0.5544 0.14706666666666665 0.147 0.3464666666666667 0.22959999999999997 0.5544 0.22959999999999997s0.4073333333333333 -0.08259999999999999 0.5544 -0.22959999999999997c0.147 -0.14706666666666665 0.22959999999999997 -0.3464666666666667 0.22959999999999997 -0.5544V2.5119999999999996c0 -0.20793333333333333 0.08259999999999999 -0.4073333333333333 0.22959999999999997 -0.5544 0.14706666666666665 -0.147 0.3464666666666667 -0.22959999999999997 0.5544 -0.22959999999999997h7.84c0.20793333333333333 0 0.4074 0.08259999999999999 0.5544 0.22959999999999997 0.147 0.14706666666666665 0.22959999999999997 0.3464666666666667 0.22959999999999997 0.5544v10.975999999999999c0 0.20793333333333333 -0.08259999999999999 0.4073333333333333 -0.22959999999999997 0.5544s-0.3464666666666667 0.22959999999999997 -0.5544 0.22959999999999997H4.08c-0.20793333333333333 0 -0.4073333333333333 -0.08259999999999999 -0.5544 -0.22959999999999997 -0.147 -0.147 -0.22959999999999997 -0.3464666666666667 -0.22959999999999997 -0.5544v-2.352c0 -0.20793333333333333 -0.08259999999999999 -0.4073333333333333 -0.22959999999999997 -0.5543333333333333 -0.14706666666666665 -0.147 -0.3464666666666667 -0.22966666666666663 -0.5544 -0.22966666666666663s-0.4073333333333333 0.08266666666666667 -0.5544 0.22966666666666663c-0.147 0.147 -0.22959999999999997 0.34639999999999993 -0.22959999999999997 0.5543333333333333v2.352c0 0.6237333333333333 0.24779999999999996 1.222 0.6888666666666667 1.6631333333333331 0.44113333333333327 0.4410666666666666 1.0393333333333332 0.6888666666666667 1.6631333333333331 0.6888666666666667h7.84c0.6237333333333333 0 1.222 -0.24779999999999996 1.6631333333333331 -0.6888666666666667 0.4410666666666666 -0.44113333333333327 0.6888666666666667 -1.0393999999999999 0.6888666666666667 -1.6631333333333331V2.5119999999999996c0 -0.6237999999999999 -0.24779999999999996 -1.222 -0.6888666666666667 -1.6631333333333331C13.142 0.4078 12.543733333333332 0.15999999999999998 11.919999999999998 0.15999999999999998Z" fill="#ff4444" strokeWidth="0.6667"></path>
+              </svg>
+            </button>
+          )}
         </div>
       </nav>
 
       {/* Main Layout */}
-      <div className="admin-layout">
+      <div style={{
+        display: 'flex',
+        gap: '0',
+        background: 'var(--bg-primary)',
+        minHeight: 'calc(100vh - 80px)',
+        width: '100%'
+      }}>
         {/* ================= MAIN CONTENT ================= */}
-        <main className="home-feed">
+        <main style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '16px',
+          flex: 1,
+          padding: '24px 24px 24px 48px',
+          minWidth: 0,
+          maxWidth: '1200px',
+          marginLeft: 'auto',
+          marginRight: '0'
+        }}>
         {/* TAB: Feed/Home */}
         {activeTab === 'home' && (
           <>
@@ -479,51 +558,59 @@ export default function AdminPage({ onNavigate, userData, handleLogout }) {
             ) : (
               posts.map(post => (
                 <article key={post.id} style={{
-                  background: 'rgba(255,255,255,0.02)',
-                  border: '1px solid #333',
-                  borderRadius: '12px',
-                  padding: '20px',
-                  marginBottom: '16px'
+                  background: 'var(--bg-secondary)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '8px',
+                  padding: '12px 16px',
+                  marginBottom: '12px',
+                  maxWidth: '100%'
                 }}>
-                  <div style={{ display: 'flex', gap: '12px', marginBottom: '12px' }}>
+                  <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
                     <div style={{
-                      width: '48px',
-                      height: '48px',
+                      width: '36px',
+                      height: '36px',
                       borderRadius: '50%',
                       background: 'linear-gradient(135deg, #00d9ff, #00ff88)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      flexShrink: 0
+                      flexShrink: 0,
+                      fontSize: '16px'
                     }}>
                       {post.author_avatar || '👤'}
                     </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: '600', marginBottom: '4px', color: 'var(--text-primary)' }}>
-                        {post.author_display_name || post.author_username}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <div style={{ fontWeight: '600', fontSize: '14px', color: 'var(--text-primary)', marginBottom: '2px' }}>
+                            {post.author_display_name || post.author_username}
+                          </div>
+                          <div style={{ color: 'var(--text-secondary)', fontSize: '12px' }}>
+                            @{post.author_username} · {formatDate(post.created_at)}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleDeletePost(post.id)}
+                          style={{
+                            padding: '4px 10px',
+                            background: 'rgba(255,68,68,0.2)',
+                            border: '1px solid #ff4444',
+                            color: '#ff4444',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '11px',
+                            flexShrink: 0,
+                            marginLeft: '8px'
+                          }}
+                        >
+                          Delete
+                        </button>
                       </div>
-                      <div style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>
-                        @{post.author_username} · {formatDate(post.created_at)}
-                      </div>
+                      <p style={{ margin: '0', lineHeight: '1.4', color: 'var(--text-primary)', fontSize: '13px', wordBreak: 'break-word' }}>
+                        {post.content}
+                      </p>
                     </div>
-                    <button
-                      onClick={() => handleDeletePost(post.id)}
-                      style={{
-                        padding: '6px 12px',
-                        background: 'rgba(255,68,68,0.2)',
-                        border: '1px solid #ff4444',
-                        color: '#ff4444',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        fontSize: '12px'
-                      }}
-                    >
-                      Delete
-                    </button>
                   </div>
-                  <p style={{ margin: '0 0 12px 60px', lineHeight: '1.5', color: 'var(--text-primary)' }}>
-                    {post.content}
-                  </p>
                 </article>
               ))
             )}
@@ -840,7 +927,9 @@ export default function AdminPage({ onNavigate, userData, handleLogout }) {
                               </div>
                             </td>
                             <td style={{ padding: '16px' }}>
-                              <span style={{
+                              <span 
+                                title={user.role === 'admin' ? 'Admin - Full system access' : user.role === 'moderator' ? 'Moderator - Can moderate content' : 'User - Regular user account'}
+                                style={{
                                 padding: '4px 8px',
                                 borderRadius: '4px',
                                 fontSize: '12px',
@@ -848,16 +937,17 @@ export default function AdminPage({ onNavigate, userData, handleLogout }) {
                                 background: user.role === 'admin' ? 'rgba(255,68,68,0.2)' :
                                            user.role === 'moderator' ? 'rgba(0,217,255,0.2)' : 'rgba(0,255,136,0.2)',
                                 color: user.role === 'admin' ? '#ff4444' :
-                                       user.role === 'moderator' ? '#00d9ff' : '#00ff88'
+                                       user.role === 'moderator' ? '#00d9ff' : '#00ff88',
+                                cursor: 'help'
                               }}>
                                 {user.role === 'admin' ? '👑' : user.role === 'moderator' ? '🛡️' : '👤'} {user.role}
                               </span>
                             </td>
                             <td style={{ padding: '16px' }}>
                               {user.is_suspended ? (
-                                <span style={{ color: '#ff4444' }}>Suspended</span>
+                                <span style={{ color: '#ff4444' }} title="This user is currently suspended">Suspended</span>
                               ) : (
-                                <span style={{ color: '#00ff88' }}>✓ Active</span>
+                                <span style={{ color: '#00ff88' }} title="This user account is active">✓ Active</span>
                               )}
                             </td>
                             <td style={{ padding: '16px', color: '#888' }}>{formatDate(user.created_at)}</td>
@@ -969,28 +1059,50 @@ export default function AdminPage({ onNavigate, userData, handleLogout }) {
         </main>
 
         {/* Right Sidebar - Admin Quick Stats */}
-        <aside className="right-sidebar">
-          <div className="sidebar-card">
-            <h3>📊 Instance Stats</h3>
-            <div style={{ display: 'grid', gap: '12px', marginTop: '16px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#888' }}>Total Users</span>
-                <span style={{ color: '#00d9ff', fontWeight: '600' }}>{totalUsers}</span>
+        <aside style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '16px',
+          position: 'sticky',
+          top: '90px',
+          alignSelf: 'flex-start',
+          maxHeight: 'calc(100vh - 110px)',
+          overflowY: 'auto',
+          width: '320px',
+          flexShrink: 0,
+          padding: '24px 32px 24px 24px'
+        }}>
+          <div style={{
+            background: 'var(--bg-secondary)',
+            border: '1px solid var(--border-color)',
+            borderRadius: '12px',
+            padding: '20px'
+          }}>
+            <h3 style={{ margin: '0 0 16px 0', color: 'var(--text-primary)', fontSize: '16px', fontWeight: '600' }}>📊 Instance Stats</h3>
+            <div style={{ display: 'grid', gap: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--border-color)' }}>
+                <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>Total Users</span>
+                <span style={{ color: '#00d9ff', fontWeight: '600', fontSize: '14px' }}>{totalUsers}</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#888' }}>Pending Requests</span>
-                <span style={{ color: '#ff006e', fontWeight: '600' }}>{moderationRequests.length}</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--border-color)' }}>
+                <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>Pending Requests</span>
+                <span style={{ color: '#ff006e', fontWeight: '600', fontSize: '14px' }}>{moderationRequests.length}</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#888' }}>Suspended Users</span>
-                <span style={{ color: '#ff4444', fontWeight: '600' }}>{suspendedUsers.length}</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0' }}>
+                <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>Suspended Users</span>
+                <span style={{ color: '#ff4444', fontWeight: '600', fontSize: '14px' }}>{suspendedUsers.length}</span>
               </div>
             </div>
           </div>
 
-          <div className="sidebar-card">
-            <h3>🔧 Quick Actions</h3>
-            <div style={{ display: 'grid', gap: '8px', marginTop: '16px' }}>
+          <div style={{
+            background: 'var(--bg-secondary)',
+            border: '1px solid var(--border-color)',
+            borderRadius: '12px',
+            padding: '20px'
+          }}>
+            <h3 style={{ margin: '0 0 16px 0', color: 'var(--text-primary)', fontSize: '16px', fontWeight: '600' }}>🔧 Quick Actions</h3>
+            <div style={{ display: 'grid', gap: '8px' }}>
               <button
                 onClick={() => onNavigate('moderation')}
                 style={{
@@ -1039,13 +1151,18 @@ export default function AdminPage({ onNavigate, userData, handleLogout }) {
             </div>
           </div>
 
-          <div className="sidebar-card">
-            <h3>Admin Info</h3>
-            <div style={{ marginTop: '16px' }}>
-              <p style={{ color: '#888', fontSize: '13px' }}>Logged in as:</p>
-              <p style={{ color: '#ff4444', fontWeight: '600' }}>@{userData?.username}</p>
-              <p style={{ color: '#666', fontSize: '12px', marginTop: '8px' }}>
-                Full admin privileges enabled
+          <div style={{
+            background: 'var(--bg-secondary)',
+            border: '1px solid var(--border-color)',
+            borderRadius: '12px',
+            padding: '20px'
+          }}>
+            <h3 style={{ margin: '0 0 16px 0', color: 'var(--text-primary)', fontSize: '16px', fontWeight: '600' }}>Admin Info</h3>
+            <div>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '13px', margin: '0 0 8px 0' }}>Logged in as:</p>
+              <p style={{ color: '#ff4444', fontWeight: '600', margin: '0 0 8px 0', fontSize: '15px' }}>@{userData?.username}</p>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '12px', margin: 0, padding: '8px 12px', background: 'rgba(255,68,68,0.1)', borderRadius: '6px', border: '1px solid rgba(255,68,68,0.3)' }}>
+                ⚡ Full admin privileges enabled
               </p>
             </div>
           </div>

@@ -62,10 +62,54 @@ export default function SecurityPage({ onNavigate, userData, updateUserData }) {
           ← Back
         </button>
         <h1 className="navbar-title">Security Dashboard</h1>
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: '10px' }}>
-          <button onClick={() => onNavigate('profile')} style={{ padding: '8px 12px', background: 'var(--bg-tertiary)', border: '1px solid var(--primary-cyan)', color: 'var(--primary-cyan)', borderRadius: '6px', cursor: 'pointer' }}>Profile</button>
-          <button onClick={() => onNavigate('dm')} style={{ padding: '8px 12px', background: 'var(--bg-tertiary)', border: '1px solid var(--primary-cyan)', color: 'var(--primary-cyan)', borderRadius: '6px', cursor: 'pointer' }}>💬 Messages</button>
-          <button onClick={toggleTheme} style={{ padding: '8px 12px', background: 'var(--bg-tertiary)', border: '1px solid var(--primary-cyan)', color: 'var(--primary-cyan)', borderRadius: '6px', cursor: 'pointer' }}>{isDarkMode ? '🌙' : '☀️'}</button>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <button
+            className="nav-btn-profile"
+            onClick={() => onNavigate('profile')}
+            style={{
+              padding: '8px 12px',
+              background: isDarkMode ? 'rgba(0, 217, 255, 0.1)' : 'rgba(100, 100, 100, 0.1)',
+              border: `1px solid ${isDarkMode ? '#00d9ff' : '#666'}`,
+              color: isDarkMode ? '#00d9ff' : '#333',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: '500'
+            }}
+          >
+            Profile
+          </button>
+          <button
+            className="nav-btn-profile"
+            onClick={() => onNavigate('dm')}
+            style={{
+              padding: '8px 12px',
+              background: isDarkMode ? 'rgba(0, 217, 255, 0.1)' : 'rgba(100, 100, 100, 0.1)',
+              border: `1px solid ${isDarkMode ? '#00d9ff' : '#666'}`,
+              color: isDarkMode ? '#00d9ff' : '#333',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: '500'
+            }}
+          >
+            💬 Messages
+          </button>
+          <button
+            className="nav-btn-profile"
+            onClick={toggleTheme}
+            title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+            style={{
+              padding: '8px 12px',
+              background: isDarkMode ? 'rgba(0, 217, 255, 0.1)' : 'rgba(100, 100, 100, 0.1)',
+              border: `1px solid ${isDarkMode ? '#00d9ff' : '#666'}`,
+              color: isDarkMode ? '#00d9ff' : '#333',
+              borderRadius: '6px',
+              cursor: 'pointer'
+            }}
+          >
+            {isDarkMode ? '🌞' : '🌙'}
+          </button>
         </div>
       </div>
 
@@ -98,17 +142,17 @@ export default function SecurityPage({ onNavigate, userData, updateUserData }) {
                 onChange={(e) => setDefaultVisibility(e.target.value)}
                 style={{
                   padding: '8px 12px',
-                  background: 'var(--bg-tertiary)',
+                  background: isDarkMode ? '#1a1a2e' : '#f5f5f5',
                   border: '1px solid var(--border-color)',
-                  color: 'var(--text-primary)',
+                  color: isDarkMode ? '#e0e0e0' : '#333',
                   borderRadius: '6px',
                   cursor: 'pointer',
                   minWidth: '150px'
                 }}
               >
-                <option value="public">🌐 Public</option>
-                <option value="followers">👥 Followers Only</option>
-                <option value="circle">🔒 Circle Only</option>
+                <option value="public" style={{ background: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}>🌐 Public</option>
+                <option value="followers" style={{ background: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}>👥 Followers Only</option>
+                <option value="circle" style={{ background: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}>🔒 Circle Only</option>
               </select>
             </div>
 
@@ -123,17 +167,17 @@ export default function SecurityPage({ onNavigate, userData, updateUserData }) {
                 onChange={(e) => setMessagePrivacy(e.target.value)}
                 style={{
                   padding: '8px 12px',
-                  background: 'var(--bg-tertiary)',
+                  background: isDarkMode ? '#1a1a2e' : '#f5f5f5',
                   border: '1px solid var(--border-color)',
-                  color: 'var(--text-primary)',
+                  color: isDarkMode ? '#e0e0e0' : '#333',
                   borderRadius: '6px',
                   cursor: 'pointer',
                   minWidth: '150px'
                 }}
               >
-                <option value="everyone">🌐 Everyone</option>
-                <option value="followers">👥 Followers Only</option>
-                <option value="none">🚫 No One</option>
+                <option value="everyone" style={{ background: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}>🌐 Everyone</option>
+                <option value="followers" style={{ background: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}>👥 Followers Only</option>
+                <option value="none" style={{ background: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}>🚫 No One</option>
               </select>
             </div>
 
@@ -166,9 +210,9 @@ export default function SecurityPage({ onNavigate, userData, updateUserData }) {
               disabled={isSaving}
               style={{
                 padding: '12px 24px',
-                background: 'linear-gradient(135deg, #00d9ff, #00ff88)',
+                background: 'var(--accent-gradient)',
                 border: 'none',
-                color: '#000',
+                color: isDarkMode ? '#000' : '#fff',
                 borderRadius: '8px',
                 cursor: isSaving ? 'not-allowed' : 'pointer',
                 fontWeight: '600',
@@ -219,8 +263,8 @@ export default function SecurityPage({ onNavigate, userData, updateUserData }) {
           {/* DID */}
           <div className="key-field">
             <label className="key-label" style={{ color: 'var(--text-secondary)' }}>Decentralized Identifier (DID)</label>
-            <div className="key-value-container" style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)' }}>
-              <code className="key-value" style={{ color: 'var(--text-primary)' }}>{did}</code>
+            <div className="key-value-container" style={{ background: isDarkMode ? '#1a1a2e' : '#f5f5f5', border: '1px solid var(--border-color)' }}>
+              <code className="key-value" style={{ color: isDarkMode ? '#e0e0e0' : '#333', background: 'transparent' }}>{did}</code>
               <button
                 className={`copy-button ${copiedField === 'did' ? 'copied' : ''}`}
                 onClick={() => handleCopyToClipboard(did, 'did')}
@@ -235,8 +279,8 @@ export default function SecurityPage({ onNavigate, userData, updateUserData }) {
           {/* Public Key Fingerprint */}
           <div className="key-field">
             <label className="key-label" style={{ color: 'var(--text-secondary)' }}>Public Key Fingerprint (SHA-256)</label>
-            <div className="key-value-container" style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)' }}>
-              <code className="key-value" style={{ color: 'var(--text-primary)' }}>{publicKeyFingerprint}</code>
+            <div className="key-value-container" style={{ background: isDarkMode ? '#1a1a2e' : '#f5f5f5', border: '1px solid var(--border-color)' }}>
+              <code className="key-value" style={{ color: isDarkMode ? '#e0e0e0' : '#333', background: 'transparent' }}>{publicKeyFingerprint}</code>
               <button
                 className={`copy-button ${copiedField === 'fingerprint' ? 'copied' : ''}`}
                 onClick={() =>
@@ -255,8 +299,8 @@ export default function SecurityPage({ onNavigate, userData, updateUserData }) {
             <label className="key-label" style={{ color: 'var(--text-secondary)' }}>Recovery Code</label>
             <div className="recovery-code-section">
               {showRecoveryCode ? (
-                <div className="key-value-container" style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)' }}>
-                  <code className="key-value recovery-code" style={{ color: 'var(--text-primary)' }}>
+                <div className="key-value-container" style={{ background: isDarkMode ? '#1a1a2e' : '#f5f5f5', border: '1px solid var(--border-color)' }}>
+                  <code className="key-value recovery-code" style={{ color: isDarkMode ? '#e0e0e0' : '#333', background: 'transparent' }}>
                     {recoveryCode}
                   </code>
                   <button
@@ -290,7 +334,7 @@ export default function SecurityPage({ onNavigate, userData, updateUserData }) {
             <button
               className="action-btn primary"
               onClick={() => alert('Recovery file would download: recovery_' + Date.now() + '.json')}
-              style={{ background: 'var(--accent-gradient)', color: isDarkMode ? '#000' : '#fff' }}
+              style={{ background: 'var(--accent-gradient)', color: isDarkMode ? '#000' : '#fff', border: 'none' }}
             >
               📥 Export Recovery File
             </button>
