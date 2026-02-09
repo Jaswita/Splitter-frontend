@@ -176,7 +176,7 @@ export default function ThreadPage({ onNavigate, postId, userData }) {
       console.error('Cannot create reply: postId is missing');
       return;
     }
-    
+
     setIsSubmitting(true);
     try {
       await postApi.createReply(postId, content, parentId);
@@ -244,16 +244,26 @@ export default function ThreadPage({ onNavigate, postId, userData }) {
       {userData?.id && (
         <div className="reply-composer">
           <textarea
+            className="reply-textarea"
             value={mainReplyText}
             onChange={(e) => setMainReplyText(e.target.value)}
             placeholder="Write a reply..."
           />
-          <button
-            onClick={handleMainReplySubmit}
-            disabled={!mainReplyText.trim() || isSubmitting}
-          >
-            Reply
-          </button>
+          <div className="composer-actions">
+            <button
+              className="reply-button cancel"
+              onClick={() => setMainReplyText('')}
+            >
+              Cancel
+            </button>
+            <button
+              className="reply-button"
+              onClick={handleMainReplySubmit}
+              disabled={!mainReplyText.trim() || isSubmitting}
+            >
+              {isSubmitting ? 'Posting...' : 'Reply'}
+            </button>
+          </div>
         </div>
       )}
     </div>
