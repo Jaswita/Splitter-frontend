@@ -295,7 +295,7 @@ export default function ProfilePage({ onNavigate, userData, viewingUserId = null
                 <div
                   key={post.id}
                   className="post-card-profile"
-                  onClick={() => onNavigate('thread')}
+                  onClick={() => onNavigate('thread', { postId: post.id })}
                   style={{ cursor: 'pointer' }}
                 >
                   <div className="post-badges">

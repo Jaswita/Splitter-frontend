@@ -172,6 +172,11 @@ export default function ThreadPage({ onNavigate, postId, userData }) {
   };
 
   const handlePostReply = async (parentId, content) => {
+    if (!postId) {
+      console.error('Cannot create reply: postId is missing');
+      return;
+    }
+    
     setIsSubmitting(true);
     try {
       await postApi.createReply(postId, content, parentId);
@@ -182,6 +187,9 @@ export default function ThreadPage({ onNavigate, postId, userData }) {
         ...prev,
         total_reply_count: (prev.total_reply_count || 0) + 1
       }));
+    } catch (err) {
+      console.error('Failed to create reply:', err);
+      setError('Failed to post reply. Please try again.');
     } finally {
       setIsSubmitting(false);
     }

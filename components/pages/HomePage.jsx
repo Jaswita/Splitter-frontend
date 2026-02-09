@@ -981,7 +981,7 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
                   <div
                     className="post-content"
                     style={{ cursor: 'pointer' }}
-                    onClick={() => onNavigate('thread')}
+                    onClick={() => onNavigate('thread', { postId: post.id })}
                   >
                     {post.content}
                     {post.imageUrl && (
@@ -1048,7 +1048,7 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
                 <div className="post-actions">
                   <button
                     className="post-action"
-                    onClick={() => onNavigate('thread')}
+                    onClick={() => onNavigate('thread', { postId: post.id })}
                     title="Reply to this post"
                   >
                     <span className="action-icon">💬</span>
