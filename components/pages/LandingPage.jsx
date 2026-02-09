@@ -4,6 +4,7 @@ import React, { useRef } from 'react';
 import { motion, useScroll, useTransform, useSpring, useMotionValue, useMotionTemplate } from 'framer-motion';
 import { ArrowRight, Shield, Globe, Server, Code, Layers, Zap, CheckCircle2 } from 'lucide-react';
 import { useTheme } from '@/components/ui/theme-provider';
+import WalkthroughTooltip from '@/components/ui/WalkthroughTooltip';
 
 // --- Utility Components ---
 
@@ -146,6 +147,18 @@ export default function LandingPage({ onNavigate }) {
   return (
     <div ref={scrollRef} className="min-h-screen bg-background text-foreground overflow-x-hidden selection:bg-primary/30 selection:text-primary-foreground relative font-sans">
       <NoiseOverlay />
+
+      {/* Walkthrough Tooltip */}
+      <WalkthroughTooltip
+        storageKey="landing-walkthrough-v1"
+        title="Welcome to Splitter"
+        message={`Splitter is a federated social network. Think of it like email - you can join any server and still connect with everyone.
+
+Each server is independently run but they all talk to each other. Your data stays with your chosen community, and you control your identity.
+
+No single company owns your social network anymore.`}
+        position="right"
+      />
 
       {/* Navbar */}
       <motion.nav

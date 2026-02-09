@@ -27,6 +27,27 @@ export default function AdminPage({ onNavigate, userData, handleLogout }) {
   const [isSearching, setIsSearching] = useState(false);
 
   const [showBanModal, setShowBanModal] = useState(false);
+  
+  // Federation state
+  const [blockedDomains, setBlockedDomains] = useState([
+    { domain: 'spam.example.com', reason: 'Spam source', blocked_at: '2026-02-01T10:30:00Z', blocked_by: 'admin' },
+    { domain: 'evil.net', reason: 'Malicious activity', blocked_at: '2026-01-28T15:20:00Z', blocked_by: 'admin' }
+  ]);
+  const [federationActivities, setFederationActivities] = useState([
+    { id: 1, type: 'inbox', domain: 'node1.social', activity_type: 'Create', status: 'success', timestamp: '2026-02-09T12:30:00Z' },
+    { id: 2, type: 'outbox', domain: 'federated.net', activity_type: 'Follow', status: 'success', timestamp: '2026-02-09T12:25:00Z' },
+    { id: 3, type: 'inbox', domain: 'privacy.social', activity_type: 'Like', status: 'success', timestamp: '2026-02-09T12:20:00Z' },
+    { id: 4, type: 'outbox', domain: 'crypto.social', activity_type: 'Create', status: 'pending', timestamp: '2026-02-09T12:15:00Z' }
+  ]);
+  const [trafficMetrics, setTrafficMetrics] = useState({
+    totalInbound: 1247,
+    totalOutbound: 892,
+    successRate: 98.5,
+    avgLatency: 245,
+    activeDomains: 15
+  });
+  const [newBlockDomain, setNewBlockDomain] = useState('');
+  const [newBlockReason, setNewBlockReason] = useState('');
   const [banTarget, setBanTarget] = useState(null);
   const [banReason, setBanReason] = useState('');
 
@@ -342,6 +363,12 @@ export default function AdminPage({ onNavigate, userData, handleLogout }) {
             onClick={() => setActiveTab('users')}
           >
             Users
+          </button>
+          <button 
+            className={`nav-item ${activeTab === 'federation' ? 'active' : ''}`}
+            onClick={() => setActiveTab('federation')}
+          >
+            Federation
           </button>
         </div>
 
@@ -1054,6 +1081,200 @@ export default function AdminPage({ onNavigate, userData, handleLogout }) {
                   )}
                 </>
               )}
+            </>
+          )}
+
+          {/* Federation Tab */}
+          {activeTab === 'federation' && (
+            <>
+              <h2 style={{ margin: '0 0 24px 0', color: 'var(--text-primary)', fontSize: '24px', fontWeight: '700' }}>
+                🌐 Federation Management
+              </h2>
+
+              {/* Traffic Metrics */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '32px' }}>
+                <div style={{ background: 'rgba(0,217,255,0.1)', border: '1px solid #00d9ff', borderRadius: '12px', padding: '20px' }}>
+                  <div style={{ fontSize: '12px', color: '#888', marginBottom: '8px' }}>Total Inbound</div>
+                  <div style={{ fontSize: '28px', fontWeight: '700', color: '#00d9ff' }}>{trafficMetrics.totalInbound}</div>
+                </div>
+                <div style={{ background: 'rgba(0,255,136,0.1)', border: '1px solid #00ff88', borderRadius: '12px', padding: '20px' }}>
+                  <div style={{ fontSize: '12px', color: '#888', marginBottom: '8px' }}>Total Outbound</div>
+                  <div style={{ fontSize: '28px', fontWeight: '700', color: '#00ff88' }}>{trafficMetrics.totalOutbound}</div>
+                </div>
+                <div style={{ background: 'rgba(255,106,236,0.1)', border: '1px solid #ff6aec', borderRadius: '12px', padding: '20px' }}>
+                  <div style={{ fontSize: '12px', color: '#888', marginBottom: '8px' }}>Success Rate</div>
+                  <div style={{ fontSize: '28px', fontWeight: '700', color: '#ff6aec' }}>{trafficMetrics.successRate}%</div>
+                </div>
+                <div style={{ background: 'rgba(255,170,0,0.1)', border: '1px solid #ffaa00', borderRadius: '12px', padding: '20px' }}>
+                  <div style={{ fontSize: '12px', color: '#888', marginBottom: '8px' }}>Avg Latency</div>
+                  <div style={{ fontSize: '28px', fontWeight: '700', color: '#ffaa00' }}>{trafficMetrics.avgLatency}ms</div>
+                </div>
+                <div style={{ background: 'rgba(138,43,226,0.1)', border: '1px solid #8a2be2', borderRadius: '12px', padding: '20px' }}>
+                  <div style={{ fontSize: '12px', color: '#888', marginBottom: '8px' }}>Active Domains</div>
+                  <div style={{ fontSize: '28px', fontWeight: '700', color: '#8a2be2' }}>{trafficMetrics.activeDomains}</div>
+                </div>
+              </div>
+
+              {/* Block Domain Form */}
+              <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '24px', marginBottom: '32px' }}>
+                <h3 style={{ margin: '0 0 16px 0', fontSize: '18px', fontWeight: '600' }}>Block Domain</h3>
+                <div style={{ display: 'grid', gap: '12px' }}>
+                  <input
+                    type="text"
+                    placeholder="Domain (e.g., spam.example.com)"
+                    value={newBlockDomain}
+                    onChange={(e) => setNewBlockDomain(e.target.value)}
+                    style={{
+                      padding: '12px',
+                      background: 'var(--bg-primary)',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '8px',
+                      color: 'var(--text-primary)'
+                    }}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Reason for blocking"
+                    value={newBlockReason}
+                    onChange={(e) => setNewBlockReason(e.target.value)}
+                    style={{
+                      padding: '12px',
+                      background: 'var(--bg-primary)',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '8px',
+                      color: 'var(--text-primary)'
+                    }}
+                  />
+                  <button
+                    onClick={() => {
+                      if (newBlockDomain && newBlockReason) {
+                        setBlockedDomains([...blockedDomains, {
+                          domain: newBlockDomain,
+                          reason: newBlockReason,
+                          blocked_at: new Date().toISOString(),
+                          blocked_by: userData.username
+                        }]);
+                        setNewBlockDomain('');
+                        setNewBlockReason('');
+                      }
+                    }}
+                    disabled={!newBlockDomain || !newBlockReason}
+                    style={{
+                      padding: '12px',
+                      background: 'rgba(255,68,68,0.2)',
+                      border: '1px solid #ff4444',
+                      borderRadius: '8px',
+                      color: '#ff4444',
+                      cursor: (!newBlockDomain || !newBlockReason) ? 'not-allowed' : 'pointer',
+                      opacity: (!newBlockDomain || !newBlockReason) ? 0.5 : 1
+                    }}
+                  >
+                    🚫 Block Domain
+                  </button>
+                </div>
+              </div>
+
+              {/* Blocked Domains */}
+              <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '24px', marginBottom: '32px' }}>
+                <h3 style={{ margin: '0 0 16px 0', fontSize: '18px', fontWeight: '600' }}>Blocked Domains ({blockedDomains.length})</h3>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
+                        <th style={{ textAlign: 'left', padding: '12px', color: '#888', fontSize: '12px', fontWeight: '600' }}>DOMAIN</th>
+                        <th style={{ textAlign: 'left', padding: '12px', color: '#888', fontSize: '12px', fontWeight: '600' }}>REASON</th>
+                        <th style={{ textAlign: 'left', padding: '12px', color: '#888', fontSize: '12px', fontWeight: '600' }}>BLOCKED AT</th>
+                        <th style={{ textAlign: 'left', padding: '12px', color: '#888', fontSize: '12px', fontWeight: '600' }}>BLOCKED BY</th>
+                        <th style={{ textAlign: 'center', padding: '12px', color: '#888', fontSize: '12px', fontWeight: '600' }}>ACTION</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {blockedDomains.map((domain, idx) => (
+                        <tr key={idx} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                          <td style={{ padding: '12px', fontSize: '14px' }}>
+                            <code style={{ background: 'rgba(255,68,68,0.1)', padding: '4px 8px', borderRadius: '4px', color: '#ff4444' }}>
+                              {domain.domain}
+                            </code>
+                          </td>
+                          <td style={{ padding: '12px', fontSize: '13px', color: '#ccc' }}>{domain.reason}</td>
+                          <td style={{ padding: '12px', fontSize: '12px', color: '#888' }}>{formatDate(domain.blocked_at)}</td>
+                          <td style={{ padding: '12px', fontSize: '13px' }}>@{domain.blocked_by}</td>
+                          <td style={{ padding: '12px', textAlign: 'center' }}>
+                            <button
+                              onClick={() => setBlockedDomains(blockedDomains.filter((_, i) => i !== idx))}
+                              style={{
+                                padding: '6px 12px',
+                                background: 'rgba(0,255,136,0.1)',
+                                border: '1px solid #00ff88',
+                                borderRadius: '6px',
+                                color: '#00ff88',
+                                cursor: 'pointer',
+                                fontSize: '12px'
+                              }}
+                            >
+                              Unblock
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Federation Activities */}
+              <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '24px' }}>
+                <h3 style={{ margin: '0 0 16px 0', fontSize: '18px', fontWeight: '600' }}>Recent Federation Activities</h3>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
+                        <th style={{ textAlign: 'left', padding: '12px', color: '#888', fontSize: '12px', fontWeight: '600' }}>TYPE</th>
+                        <th style={{ textAlign: 'left', padding: '12px', color: '#888', fontSize: '12px', fontWeight: '600' }}>DOMAIN</th>
+                        <th style={{ textAlign: 'left', padding: '12px', color: '#888', fontSize: '12px', fontWeight: '600' }}>ACTIVITY</th>
+                        <th style={{ textAlign: 'left', padding: '12px', color: '#888', fontSize: '12px', fontWeight: '600' }}>STATUS</th>
+                        <th style={{ textAlign: 'left', padding: '12px', color: '#888', fontSize: '12px', fontWeight: '600' }}>TIMESTAMP</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {federationActivities.map((activity) => (
+                        <tr key={activity.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                          <td style={{ padding: '12px' }}>
+                            <span style={{
+                              padding: '4px 8px',
+                              borderRadius: '4px',
+                              fontSize: '11px',
+                              fontWeight: '600',
+                              background: activity.type === 'inbox' ? 'rgba(0,217,255,0.1)' : 'rgba(0,255,136,0.1)',
+                              color: activity.type === 'inbox' ? '#00d9ff' : '#00ff88'
+                            }}>
+                              {activity.type === 'inbox' ? '📥 IN' : '📤 OUT'}
+                            </span>
+                          </td>
+                          <td style={{ padding: '12px', fontSize: '13px' }}>
+                            <code style={{ background: 'rgba(255,255,255,0.05)', padding: '4px 8px', borderRadius: '4px' }}>
+                              {activity.domain}
+                            </code>
+                          </td>
+                          <td style={{ padding: '12px', fontSize: '13px', color: '#ccc' }}>{activity.activity_type}</td>
+                          <td style={{ padding: '12px' }}>
+                            <span style={{
+                              padding: '4px 8px',
+                              borderRadius: '4px',
+                              fontSize: '11px',
+                              background: activity.status === 'success' ? 'rgba(0,255,136,0.1)' : 'rgba(255,170,0,0.1)',
+                              color: activity.status === 'success' ? '#00ff88' : '#ffaa00'
+                            }}>
+                              {activity.status === 'success' ? '✓' : '⏳'} {activity.status}
+                            </span>
+                          </td>
+                          <td style={{ padding: '12px', fontSize: '12px', color: '#888' }}>{formatTimestamp(activity.timestamp)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </>
           )}
         </main>

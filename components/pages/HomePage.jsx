@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import '../styles/HomePage.css';
 import { postApi, interactionApi, adminApi, searchApi, messageApi } from '@/lib/api';
+import HomePageWalkthrough from '@/components/ui/HomePageWalkthrough';
 
 // Sample posts for demo when no backend posts available
 const SAMPLE_POSTS = [
@@ -424,6 +425,9 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
 
   return (
     <div className="home-container">
+      {/* Walkthrough */}
+      <HomePageWalkthrough />
+
       {/* Top Navigation */}
       <nav className="home-nav">
         <div className="nav-left">
@@ -667,14 +671,14 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
                 <span>Home</span>
               </button>
               <button
-                className="sidebar-link"
+                className="sidebar-link messages-btn"
                 onClick={() => onNavigate('dm')}
                 style={{ textAlign: 'left', width: '100%' }}
               >
                 <span>Messages 🔒</span>
               </button>
               <button
-                className="sidebar-link"
+                className="sidebar-link security-btn"
                 onClick={() => onNavigate('security')}
                 style={{ textAlign: 'left', width: '100%' }}
               >
@@ -683,7 +687,7 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
             </div>
           </div>
 
-          <div className="sidebar-section">
+          <div className="sidebar-section stats-widget user-info">
             <h3 className="sidebar-title">Your Profile</h3>
             <div className="sidebar-profile">
               <div className="profile-avatar">{userData.avatar}</div>
@@ -749,7 +753,7 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
           )}
 
           {/* Composer */}
-          <div className="feed-composer">
+          <div className="feed-composer post-create">
             <div className="composer-header">
               <h2>What's happening? 🌐</h2>
             </div>
@@ -890,7 +894,7 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
           )}
 
           {/* Posts */}
-          <div className="feed-posts">
+          <div className="feed-posts posts-list">
             {posts.map(post => (
               <article key={post.id} className={`post ${post.local ? 'local' : 'remote'}`}>
                 <div className="post-header">

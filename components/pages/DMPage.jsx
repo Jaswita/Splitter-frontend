@@ -146,6 +146,7 @@ export default function DMPage({ onNavigate, userData, selectedUser }) {
 
   return (
     <div className="dm-container">
+
       {/* Top Navigation */}
       <div className="dm-navbar">
         <button

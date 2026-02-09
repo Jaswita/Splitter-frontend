@@ -5,6 +5,7 @@ import { useTheme } from '@/components/ui/theme-provider';
 import '../styles/SignupPage.css';
 import { authApi } from '@/lib/api';
 import { generateKeyPair, storeKeyPair, exportRecoveryFile } from '@/lib/crypto';
+import WalkthroughTooltip from '@/components/ui/WalkthroughTooltip';
 
 // Server data with locations
 const SERVERS = [
@@ -331,11 +332,27 @@ export default function SignupPage({ onNavigate, updateUserData, setIsAuthentica
 
         {/* Step 1: Select Server */}
         {step === 1 && (
-          <div className="signup-form">
-            <h2 className="step-title">Select Your Server 🧭</h2>
-            <p style={{ color: isDarkMode ? '#888' : '#555', marginBottom: '16px', fontSize: '14px' }}>
-              Choose a federated server aligned with your interests and region
-            </p>
+          <>
+            {/* Walkthrough for Instance Selection */}
+            <WalkthroughTooltip
+              storageKey="signup-instance-walkthrough-v1"
+              title="Choosing Your Server"
+              message={`Servers (or instances) are like neighborhoods in Splitter. Each has its own vibe and moderation style, but you can still follow and chat with anyone on any server.
+
+Pick based on:
+• Location (lower ping = faster)
+• Community type (tech, creative, academic)
+• Moderation policy that matches your values
+
+Don't worry - you can always move later.`}
+              position="right"
+            />
+
+            <div className="signup-form">
+              <h2 className="step-title">Select Your Server 🧭</h2>
+              <p style={{ color: isDarkMode ? '#888' : '#555', marginBottom: '16px', fontSize: '14px' }}>
+                Choose a federated server aligned with your interests and region
+              </p>
 
             {/* Search & Filter */}
             <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}>
@@ -528,12 +545,29 @@ export default function SignupPage({ onNavigate, updateUserData, setIsAuthentica
               </button>
             </div>
           </div>
+          </>
         )}
 
         {/* Step 2: Account Credentials */}
         {step === 2 && (
-          <div className="signup-form">
-            <h2 className="step-title">Account Credentials 🔑</h2>
+          <>
+            {/* Walkthrough for Password */}
+            <WalkthroughTooltip
+              storageKey="signup-password-walkthrough-v1"
+              title="Secure Your Account"
+              message={`Your password is the primary way to access your account. Choose a strong password that:
+
+• Is at least 8 characters long
+• Combines uppercase and lowercase letters
+• Includes numbers and special characters
+• Is unique to this account
+
+Your password is encrypted and stored securely. We never see or store your plain text password.`}
+              position="right"
+            />
+
+            <div className="signup-form">
+              <h2 className="step-title">Account Credentials 🔑</h2>
 
             <div className="form-group">
               <label htmlFor="username">Username:</label>
@@ -634,11 +668,34 @@ export default function SignupPage({ onNavigate, updateUserData, setIsAuthentica
               </button>
             </div>
           </div>
+          </>
         )}
 
         {/* Step 3: Generate DID (Optional) */}
         {step === 3 && (
-          <div className="signup-form">
+          <>
+            {/* Walkthrough for DID */}
+            <WalkthroughTooltip
+              storageKey="signup-did-walkthrough-v1"
+              title="Decentralized Identity"
+              message={`A DID (Decentralized Identity) is a cryptographic key pair that provides advanced security benefits:
+
+What it is:
+• A unique identifier that you own and control
+• Uses public-key cryptography for authentication
+• Cannot be revoked or taken away by any server
+
+How it helps:
+• Stronger security than passwords alone
+• Prove your identity across different servers
+• Sign posts cryptographically to prevent tampering
+• Move between servers while keeping your identity
+
+This is optional - you can always add it later. If you generate it now, download the recovery file to keep it safe.`}
+              position="right"
+            />
+
+            <div className="signup-form">
             <h2 className="step-title">Decentralized Identity</h2>
             <div className="security-banner" style={{
               background: 'rgba(0, 217, 255, 0.1)',
@@ -786,6 +843,7 @@ export default function SignupPage({ onNavigate, updateUserData, setIsAuthentica
               )}
             </div>
           </div>
+          </>
         )}
 
         {/* Step 4: Profile Setup */}
