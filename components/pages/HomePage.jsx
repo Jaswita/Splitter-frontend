@@ -242,7 +242,7 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
           createdAt: post.created_at,
           updatedAt: post.updated_at,
           content: post.content,
-          replies: post.reply_count || 0,
+          replies: post.total_reply_count || 0,
           boosts: post.repost_count || 0,
           likes: post.like_count || 0,
           local: post.is_local !== undefined ? post.is_local : true,
@@ -921,8 +921,8 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
                     </div>
                   </div>
                   {post.visibility && post.visibility !== 'public' && (
-                    <span 
-                      className="post-visibility" 
+                    <span
+                      className="post-visibility"
                       style={{ color: '#888', fontSize: '12px', cursor: 'help' }}
                       title={post.visibility === 'followers' ? 'Only followers can see this post' : 'Only close circle can see this post'}
                     >

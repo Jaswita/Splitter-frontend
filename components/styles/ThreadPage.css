@@ -312,18 +312,7 @@
   background: var(--disabled-yellow);
 }
 
-/* Depth-based indentation */
-.reply-card.depth-0 {
-  margin-left: 0;
-}
 
-.reply-card.depth-1 {
-  margin-left: 20px;
-}
-
-.reply-card.depth-2 {
-  margin-left: 40px;
-}
 
 /* Scrollbar Styling */
 .thread-content::-webkit-scrollbar {
