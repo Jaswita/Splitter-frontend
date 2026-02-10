@@ -51,19 +51,69 @@ This is a **frontend-only application** built with React/JSX and CSS, implementi
 - React 18+
 - No external UI libraries required (pure CSS)
 
-### Installation
+# 🌐 Splitter - Frontend (v2)
 
-1. **Install dependencies** (if using package.json):
+**Splitter** is a decentralized, federated social network platform built with React and Next.js. It features a privacy-first architecture with localized identity management and a dark-mode-first aesthetic.
+
+## 🚀 Quick Start
+
+### 1. Prerequisites
+- **Node.js 18+** installed
+- **npm** or **yarn**
+
+### 2. Installation
 ```bash
+# Install dependencies
 npm install
 ```
 
-2. **Run the development server**:
+### 3. Run Development Server
 ```bash
+# Start the local server
 npm run dev
 ```
 
-3. **Open browser** to `http://localhost:3000`
+Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+---
+
+## 🧭 Project Navigation
+
+The application uses client-side routing managed by `app/page.tsx`.
+
+| Page | Description | Key Features |
+|------|-------------|--------------|
+| **Landing** | Welcome & Info | Federation explainer, "Get Started" CTA |
+| **Instances** | Server Selection | Browse/Search federated instances, Filter by region |
+| **Signup** | Registration | 4-step wizard, DID key generation, backup download |
+| **Login** | Authentication | Password or DID Challenge-Response login |
+| **Home** | Main Feed | Timeline, Create Post (Text/Image), Trends |
+| **Profile** | User Profile | Posts, Followers/Following, Bio |
+| **DM** | Messages | End-to-end encrypted direct messages |
+| **Security** | Key Management | View keys, export recovery kit, session info |
+| **Admin** | Dashboard | Moderation queue, server health, user management |
+
+---
+
+## 🛠️ Configuration
+
+The app is pre-configured to connect to a local backend.
+
+- **Frontend Port**: `3000` (Default)
+- **Backend API**: `http://localhost:8000` (Configurable in `lib/api.ts`)
+- **Theme**: Defined in `styles/theme.css` (CSS Variables)
+
+## 📦 Deployment
+
+This is a Next.js application that can be deployed to Vercel, Netlify, or any Node.js host.
+
+```bash
+# Build for production
+npm run build
+
+# Start production server
+npm start
+```
 
 ### Viewing Pages
 
