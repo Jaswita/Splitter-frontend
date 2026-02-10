@@ -307,16 +307,18 @@ export default function AdminPage({ onNavigate, userData, handleLogout }) {
       <nav className="home-nav">
 
         <div className="nav-left">
-          <h1 className="nav-logo" style={{ 
-            fontSize: '1.5rem', 
-            fontWeight: 700, 
-            margin: 0,
-            background: 'linear-gradient(135deg, var(--primary-cyan), var(--accent-magenta))',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text'
-          }}>
-            ⚡ Splitter Admin
+          <h1 className="nav-logo" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <img 
+              src="/logo.png" 
+              alt="Logo" 
+              style={{
+                height: '66px',
+                width: 'auto',
+                objectFit: 'contain',
+                filter: isDarkMode ? 'invert(1) hue-rotate(180deg)' : 'none'
+              }}
+            />
+            SPLITTER
           </h1>
         </div>
 

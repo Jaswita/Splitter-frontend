@@ -171,15 +171,30 @@ No single company owns your social network anymore.`}
           className="flex items-center space-x-2 group cursor-pointer"
           onClick={() => onNavigate('/')}
         >
-          <div className="relative w-9 h-9">
-            <div className="absolute inset-0 bg-primary blur-md opacity-40 group-hover:opacity-60 transition-opacity"></div>
-            <div className="relative w-full h-full rounded-lg bg-gradient-to-br from-card to-background border border-white/10 flex items-center justify-center text-foreground font-bold text-xl shadow-lg">
-              <span className="bg-clip-text text-transparent bg-gradient-to-br from-primary to-purple-500">S</span>
-            </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <img 
+              src="/logo.png" 
+              alt="Logo" 
+              style={{
+                height: '66px',
+                width: 'auto',
+                objectFit: 'contain',
+                filter: isDarkMode ? 'invert(1) hue-rotate(180deg)' : 'none'
+              }}
+            />
+            <span 
+              className="text-2xl font-bold tracking-tight"
+              style={{
+                background: 'linear-gradient(135deg, var(--primary-cyan), var(--accent-magenta))',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+                display: 'inline-block'
+              }}
+            >
+              SPLITTER
+            </span>
           </div>
-          <span className="text-lg font-bold tracking-tight group-hover:opacity-80 transition-opacity">
-            SPLITTER
-          </span>
         </div>
 
         <div className="flex items-center space-x-4">

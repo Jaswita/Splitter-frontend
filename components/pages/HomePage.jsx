@@ -431,7 +431,19 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
       {/* Top Navigation */}
       <nav className="home-nav">
         <div className="nav-left">
-          <h1 className="nav-logo">🌐 SPLITTER</h1>
+          <h1 className="nav-logo" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <img 
+              src="/logo.png" 
+              alt="Logo" 
+              style={{
+                height: '66px',
+                width: 'auto',
+                objectFit: 'contain',
+                filter: isDarkMode ? 'invert(1) hue-rotate(180deg)' : 'none'
+              }}
+            />
+            SPLITTER
+          </h1>
         </div>
         <div className="nav-center">
           <button
