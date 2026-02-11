@@ -17,6 +17,10 @@
     "isolatedModules": true,
     "jsx": "react-jsx",
     "incremental": true,
+    "types": [
+      "jest",
+      "node"
+    ], // ✅ Added this line
     "plugins": [
       {
         "name": "next"
