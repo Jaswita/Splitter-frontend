@@ -212,11 +212,31 @@ export default function SignupPage({ onNavigate, updateUserData, setIsAuthentica
     return true;
   };
 
-  const nextStep = () => {
+  const nextStep = async () => {
     setError(null);
     if (step === 2 && !validateStep2()) {
       return;
     }
+
+    // Auto-generate encryption keys when moving to step 3 if they don't exist
+    // This ensures ALL users have E2E encryption keys
+    if (step === 2 && !keyPair) {
+      setIsLoading(true);
+      try {
+        const newKeyPair = await generateKeyPair();
+        setKeyPair(newKeyPair);
+        await storeKeyPair(newKeyPair);
+        console.log('✅ Auto-generated encryption keys for E2E messaging');
+      } catch (err) {
+        console.error('Failed to auto-generate keys:', err);
+        setError('Failed to generate encryption keys. Please try again.');
+        setIsLoading(false);
+        return;
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
     setStep(step + 1);
   };
 
@@ -245,11 +265,18 @@ export default function SignupPage({ onNavigate, updateUserData, setIsAuthentica
         instance_domain: formData.server
       };
 
-      // If user generated a DID, include it
+      // Always include encryption keys (auto-generated if user didn't manually generate DID)
+      // This ensures E2E encryption works for ALL new users
       if (keyPair) {
         registrationData.did = keyPair.did;
         registrationData.public_key = keyPair.publicKeyBase64;
         registrationData.encryption_public_key = keyPair.encryptionPublicKeyBase64;
+      } else {
+        // This should never happen now due to auto-generation, but handle gracefully
+        console.warn('⚠️ No keyPair found during signup - this should not happen!');
+        setError('Encryption keys missing. Please refresh and try again.');
+        setIsLoading(false);
+        return;
       }
 
       const result = await authApi.register(registrationData);
