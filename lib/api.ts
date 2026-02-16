@@ -40,6 +40,11 @@ export const authApi = {
     email: string;
     password: string;
     display_name?: string;
+    bio?: string;
+    instance_domain?: string;
+    did?: string;
+    public_key?: string;
+    encryption_public_key?: string;
   }) {
     const response = await fetch(`${API_BASE}/auth/register`, {
       method: 'POST',
@@ -110,7 +115,10 @@ export const authApi = {
       localStorage.removeItem('jwt_token');
       localStorage.removeItem('user');
       localStorage.removeItem('private_key');
+      localStorage.removeItem('public_key');
       localStorage.removeItem('did');
+      localStorage.removeItem('encryption_private_key');
+      localStorage.removeItem('encryption_public_key');
     }
   }
 };
@@ -387,11 +395,11 @@ export const messageApi = {
     return handleResponse<{ messages: any[], thread: any }>(response);
   },
 
-  async sendMessage(recipientId: string, content: string) {
+  async sendMessage(recipientId: string, content: string, ciphertext?: string) {
     const response = await fetch(`${API_BASE}/messages/send`, {
       method: 'POST',
       headers: getAuthHeaders(),
-      body: JSON.stringify({ recipient_id: recipientId, content })
+      body: JSON.stringify({ recipient_id: recipientId, content, ciphertext })
     });
     return handleResponse<{ message: any, thread: any, recipient: any }>(response);
   },

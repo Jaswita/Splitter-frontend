@@ -7,37 +7,60 @@ export interface KeyPair {
   publicKeyBase64: string;
   privateKeyBase64: string;
   did: string;
+  // Encryption keys (ECDH)
+  encryptionPublicKey?: CryptoKey;
+  encryptionPrivateKey?: CryptoKey;
+  encryptionPublicKeyBase64?: string;
+  encryptionPrivateKeyBase64?: string;
 }
 
-// Generate a new Ed25519 keypair for DID
+// Generate a new Ed25519 (actually P-256 ECDSA) keypair for DID
 export async function generateKeyPair(): Promise<KeyPair> {
-  // Generate Ed25519 keypair (or fallback to RSA if not supported)
-  const keyPair = await window.crypto.subtle.generateKey(
+  // Generate Signing Keypair (ECDSA P-256)
+  const signKeyPair = await window.crypto.subtle.generateKey(
     {
       name: 'ECDSA',
-      namedCurve: 'P-256', // Using P-256 as Ed25519 isn't universally supported in browsers
+      namedCurve: 'P-256',
     },
     true, // extractable
     ['sign', 'verify']
   );
 
-  // Export public key
-  const publicKeyBuffer = await window.crypto.subtle.exportKey('spki', keyPair.publicKey);
-  const publicKeyBase64 = bufferToBase64(publicKeyBuffer);
+  const signPublicKeyBuffer = await window.crypto.subtle.exportKey('spki', signKeyPair.publicKey);
+  const signPublicKeyBase64 = bufferToBase64(signPublicKeyBuffer);
 
-  // Export private key
-  const privateKeyBuffer = await window.crypto.subtle.exportKey('pkcs8', keyPair.privateKey);
-  const privateKeyBase64 = bufferToBase64(privateKeyBuffer);
+  const signPrivateKeyBuffer = await window.crypto.subtle.exportKey('pkcs8', signKeyPair.privateKey);
+  const signPrivateKeyBase64 = bufferToBase64(signPrivateKeyBuffer);
 
-  // Generate DID from public key
-  const did = await generateDID(publicKeyBase64);
+  // Generate DID from signing public key
+  const did = await generateDID(signPublicKeyBase64);
+
+  // Generate Encryption Keypair (ECDH P-256)
+  const encKeyPair = await window.crypto.subtle.generateKey(
+    {
+      name: 'ECDH',
+      namedCurve: 'P-256',
+    },
+    true, // extractable
+    ['deriveKey', 'deriveBits']
+  );
+
+  const encPublicKeyBuffer = await window.crypto.subtle.exportKey('spki', encKeyPair.publicKey);
+  const encPublicKeyBase64 = bufferToBase64(encPublicKeyBuffer);
+
+  const encPrivateKeyBuffer = await window.crypto.subtle.exportKey('pkcs8', encKeyPair.privateKey);
+  const encPrivateKeyBase64 = bufferToBase64(encPrivateKeyBuffer);
 
   return {
-    publicKey: keyPair.publicKey,
-    privateKey: keyPair.privateKey,
-    publicKeyBase64,
-    privateKeyBase64,
+    publicKey: signKeyPair.publicKey,
+    privateKey: signKeyPair.privateKey,
+    publicKeyBase64: signPublicKeyBase64,
+    privateKeyBase64: signPrivateKeyBase64,
     did,
+    encryptionPublicKey: encKeyPair.publicKey,
+    encryptionPrivateKey: encKeyPair.privateKey,
+    encryptionPublicKeyBase64: encPublicKeyBase64,
+    encryptionPrivateKeyBase64: encPrivateKeyBase64,
   };
 }
 
@@ -65,10 +88,9 @@ export async function signChallenge(privateKey: CryptoKey, challenge: string): P
   return bufferToBase64(signature);
 }
 
-// Import a private key from base64
+// Import a private key from base64 (ECDSA)
 export async function importPrivateKey(base64Key: string): Promise<CryptoKey> {
   const buffer = base64ToBuffer(base64Key);
-
   return await window.crypto.subtle.importKey(
     'pkcs8',
     buffer,
@@ -80,6 +102,98 @@ export async function importPrivateKey(base64Key: string): Promise<CryptoKey> {
     ['sign']
   );
 }
+
+// Import Encryption Private Key (ECDH)
+export async function importEncryptionPrivateKey(base64Key: string): Promise<CryptoKey> {
+  const buffer = base64ToBuffer(base64Key);
+  return await window.crypto.subtle.importKey(
+    'pkcs8',
+    buffer,
+    {
+      name: 'ECDH',
+      namedCurve: 'P-256',
+    },
+    true,
+    ['deriveKey', 'deriveBits']
+  );
+}
+
+// Import Encryption Public Key (ECDH)
+export async function importEncryptionPublicKey(base64Key: string): Promise<CryptoKey> {
+  const buffer = base64ToBuffer(base64Key);
+  return await window.crypto.subtle.importKey(
+    'spki',
+    buffer,
+    {
+      name: 'ECDH',
+      namedCurve: 'P-256',
+    },
+    true,
+    [] // Public key doesn't need usages for import, but for deriveKey it will be used as public
+  );
+}
+
+// Derive Shared Secret (AES-GCM Key)
+export async function deriveSharedSecret(privateKey: CryptoKey, publicKey: CryptoKey): Promise<CryptoKey> {
+  return await window.crypto.subtle.deriveKey(
+    {
+      name: 'ECDH',
+      public: publicKey,
+    },
+    privateKey,
+    {
+      name: 'AES-GCM',
+      length: 256,
+    },
+    true, // extractable (maybe false is better for security, but we might need to export/debug)
+    ['encrypt', 'decrypt']
+  );
+}
+
+// Encrypt Message
+export async function encryptMessage(text: string, sharedKey: CryptoKey): Promise<{ ciphertext: string; iv: string }> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(text);
+  const iv = window.crypto.getRandomValues(new Uint8Array(12)); // 96-bit IV for AES-GCM
+
+  const ciphertextBuffer = await window.crypto.subtle.encrypt(
+    {
+      name: 'AES-GCM',
+      iv: iv,
+    },
+    sharedKey,
+    data
+  );
+
+  return {
+    ciphertext: bufferToBase64(ciphertextBuffer),
+    iv: bufferToBase64(iv.buffer),
+  };
+}
+
+// Decrypt Message
+export async function decryptMessage(ciphertext: string, iv: string, sharedKey: CryptoKey): Promise<string> {
+  const ciphertextBuffer = base64ToBuffer(ciphertext);
+  const ivBuffer = base64ToBuffer(iv);
+
+  try {
+    const decryptedBuffer = await window.crypto.subtle.decrypt(
+      {
+        name: 'AES-GCM',
+        iv: new Uint8Array(ivBuffer),
+      },
+      sharedKey,
+      ciphertextBuffer
+    );
+
+    const decoder = new TextDecoder();
+    return decoder.decode(decryptedBuffer);
+  } catch (error) {
+    console.error('Decryption failed:', error);
+    throw new Error('Failed to decrypt message');
+  }
+}
+
 
 // Helper: Convert ArrayBuffer to Base64
 function bufferToBase64(buffer: ArrayBuffer): string {
@@ -114,6 +228,11 @@ export function storeKeyPair(keyPair: KeyPair): void {
   localStorage.setItem('private_key', keyPair.privateKeyBase64);
   localStorage.setItem('public_key', keyPair.publicKeyBase64);
   localStorage.setItem('did', keyPair.did);
+
+  if (keyPair.encryptionPrivateKeyBase64 && keyPair.encryptionPublicKeyBase64) {
+    localStorage.setItem('encryption_private_key', keyPair.encryptionPrivateKeyBase64);
+    localStorage.setItem('encryption_public_key', keyPair.encryptionPublicKeyBase64);
+  }
 }
 
 // Retrieve keypair from localStorage
@@ -122,19 +241,41 @@ export async function loadKeyPair(): Promise<KeyPair | null> {
   const publicKeyBase64 = localStorage.getItem('public_key');
   const did = localStorage.getItem('did');
 
+  const encryptionPrivateKeyBase64 = localStorage.getItem('encryption_private_key');
+  const encryptionPublicKeyBase64 = localStorage.getItem('encryption_public_key');
+
   if (!privateKeyBase64 || !publicKeyBase64 || !did) {
     return null;
   }
 
   try {
     const privateKey = await importPrivateKey(privateKeyBase64);
-    // We don't need to import public key for signing, but store for completeness
+
+    let encryptionPrivateKey: CryptoKey | undefined;
+    let encryptionPublicKey: CryptoKey | undefined;
+
+    if (encryptionPrivateKeyBase64) {
+      encryptionPrivateKey = await importEncryptionPrivateKey(encryptionPrivateKeyBase64);
+    }
+    // Note: encryptionPublicKey is typically not needed for *our* operations (we need private to decrypt, and others' public to encrypt), 
+    // but generating shared secret with OUR public key doesn't make sense unless self-sending. 
+    // We strictly need our private key and *their* public key. 
+    // But for completeness and structure, we load it if we need to export it. Maybe.
+    // Actually, storeKeyPair stores it, so might as well load it.
+    if (encryptionPublicKeyBase64) {
+      encryptionPublicKey = await importEncryptionPublicKey(encryptionPublicKeyBase64);
+    }
+
     return {
       privateKey,
-      publicKey: null as any, // Not needed for signing
+      publicKey: null as any, // Not needed for signing, avoided import overhead
       publicKeyBase64,
       privateKeyBase64,
       did,
+      encryptionPrivateKey,
+      encryptionPublicKey,
+      encryptionPrivateKeyBase64: encryptionPrivateKeyBase64 || undefined,
+      encryptionPublicKeyBase64: encryptionPublicKeyBase64 || undefined,
     };
   } catch (error) {
     console.error('Failed to load keypair:', error);
@@ -148,6 +289,8 @@ export function exportRecoveryFile(keyPair: KeyPair, username: string, server: s
     did: keyPair.did,
     public_key: keyPair.publicKeyBase64,
     private_key: keyPair.privateKeyBase64,
+    encryption_public_key: keyPair.encryptionPublicKeyBase64,
+    encryption_private_key: keyPair.encryptionPrivateKeyBase64,
     username,
     server,
     timestamp: new Date().toISOString(),
@@ -157,7 +300,7 @@ export function exportRecoveryFile(keyPair: KeyPair, username: string, server: s
   const dataStr = JSON.stringify(recoveryData, null, 2);
   const dataBlob = new Blob([dataStr], { type: 'application/json' });
   const url = URL.createObjectURL(dataBlob);
-  
+
   const link = document.createElement('a');
   link.href = url;
   link.download = `splitter-recovery-${username}-${Date.now()}.json`;
@@ -172,6 +315,8 @@ export function clearStoredKeys(): void {
   localStorage.removeItem('private_key');
   localStorage.removeItem('public_key');
   localStorage.removeItem('did');
+  localStorage.removeItem('encryption_private_key');
+  localStorage.removeItem('encryption_public_key');
   localStorage.removeItem('jwt_token');
 }
 
@@ -182,35 +327,43 @@ export const getStoredKeyPair = loadKeyPair;
 export async function importRecoveryFile(file: File): Promise<KeyPair> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    
+
     reader.onload = async (e) => {
       try {
         const content = e.target?.result as string;
         const recoveryData = JSON.parse(content);
-        
+
         if (!recoveryData.private_key || !recoveryData.public_key || !recoveryData.did) {
           throw new Error('Invalid recovery file format');
         }
-        
+
         const privateKey = await importPrivateKey(recoveryData.private_key);
-        
+        let encryptionPrivateKey: CryptoKey | undefined;
+
+        if (recoveryData.encryption_private_key) {
+          encryptionPrivateKey = await importEncryptionPrivateKey(recoveryData.encryption_private_key);
+        }
+
         const keyPair: KeyPair = {
           privateKey,
           publicKey: null as any,
           publicKeyBase64: recoveryData.public_key,
           privateKeyBase64: recoveryData.private_key,
           did: recoveryData.did,
+          encryptionPrivateKey,
+          encryptionPrivateKeyBase64: recoveryData.encryption_private_key,
+          encryptionPublicKeyBase64: recoveryData.encryption_public_key,
         };
-        
+
         // Store the imported keys
         storeKeyPair(keyPair);
-        
+
         resolve(keyPair);
       } catch (error) {
         reject(new Error('Failed to parse recovery file'));
       }
     };
-    
+
     reader.onerror = () => reject(new Error('Failed to read file'));
     reader.readAsText(file);
   });

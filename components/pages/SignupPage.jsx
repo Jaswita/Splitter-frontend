@@ -249,6 +249,7 @@ export default function SignupPage({ onNavigate, updateUserData, setIsAuthentica
       if (keyPair) {
         registrationData.did = keyPair.did;
         registrationData.public_key = keyPair.publicKeyBase64;
+        registrationData.encryption_public_key = keyPair.encryptionPublicKeyBase64;
       }
 
       const result = await authApi.register(registrationData);
@@ -354,197 +355,197 @@ Don't worry - you can always move later.`}
                 Choose a federated server aligned with your interests and region
               </p>
 
-            {/* Search & Filter */}
-            <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}>
-              <div style={{ flex: 1, minWidth: '200px', position: 'relative' }}>
-                <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: isDarkMode ? '#666' : '#999' }}>🔍</span>
-                <input
-                  type="text"
-                  placeholder="Search servers..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+              {/* Search & Filter */}
+              <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}>
+                <div style={{ flex: 1, minWidth: '200px', position: 'relative' }}>
+                  <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: isDarkMode ? '#666' : '#999' }}>🔍</span>
+                  <input
+                    type="text"
+                    placeholder="Search servers..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '12px 12px 12px 40px',
+                      background: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
+                      border: isDarkMode ? '1px solid #333' : '1px solid #ddd',
+                      borderRadius: '8px',
+                      color: isDarkMode ? '#fff' : '#333',
+                      fontSize: '14px'
+                    }}
+                  />
+                </div>
+                <select
+                  value={selectedRegion}
+                  onChange={(e) => setSelectedRegion(e.target.value)}
                   style={{
-                    width: '100%',
-                    padding: '12px 12px 12px 40px',
+                    padding: '12px 16px',
                     background: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
                     border: isDarkMode ? '1px solid #333' : '1px solid #ddd',
                     borderRadius: '8px',
                     color: isDarkMode ? '#fff' : '#333',
-                    fontSize: '14px'
-                  }}
-                />
-              </div>
-              <select
-                value={selectedRegion}
-                onChange={(e) => setSelectedRegion(e.target.value)}
-                style={{
-                  padding: '12px 16px',
-                  background: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
-                  border: isDarkMode ? '1px solid #333' : '1px solid #ddd',
-                  borderRadius: '8px',
-                  color: isDarkMode ? '#fff' : '#333',
-                  fontSize: '14px',
-                  minWidth: '150px'
-                }}
-              >
-                {REGIONS.map(region => (
-                  <option key={region} value={region} style={{ background: isDarkMode ? '#1a1a2e' : '#fff', color: isDarkMode ? '#fff' : '#333' }}>{region}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Server Cards Grid */}
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-              gap: '16px',
-              maxHeight: '400px',
-              overflowY: 'auto',
-              padding: '4px'
-            }}>
-              {filteredServers.map(server => (
-                <div
-                  key={server.id}
-                  onClick={() => setFormData({ ...formData, server: server.name })}
-                  style={{
-                    background: formData.server === server.name
-                      ? 'linear-gradient(135deg, rgba(0, 217, 255, 0.2), rgba(0, 255, 136, 0.1))'
-                      : isDarkMode ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
-                    border: formData.server === server.name
-                      ? '2px solid #00d9ff'
-                      : isDarkMode ? '1px solid #333' : '1px solid #ddd',
-                    borderRadius: '12px',
-                    padding: '16px',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                    position: 'relative'
+                    fontSize: '14px',
+                    minWidth: '150px'
                   }}
                 >
-                  {/* Selected indicator */}
-                  {formData.server === server.name && (
+                  {REGIONS.map(region => (
+                    <option key={region} value={region} style={{ background: isDarkMode ? '#1a1a2e' : '#fff', color: isDarkMode ? '#fff' : '#333' }}>{region}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Server Cards Grid */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+                gap: '16px',
+                maxHeight: '400px',
+                overflowY: 'auto',
+                padding: '4px'
+              }}>
+                {filteredServers.map(server => (
+                  <div
+                    key={server.id}
+                    onClick={() => setFormData({ ...formData, server: server.name })}
+                    style={{
+                      background: formData.server === server.name
+                        ? 'linear-gradient(135deg, rgba(0, 217, 255, 0.2), rgba(0, 255, 136, 0.1))'
+                        : isDarkMode ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
+                      border: formData.server === server.name
+                        ? '2px solid #00d9ff'
+                        : isDarkMode ? '1px solid #333' : '1px solid #ddd',
+                      borderRadius: '12px',
+                      padding: '16px',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      position: 'relative'
+                    }}
+                  >
+                    {/* Selected indicator */}
+                    {formData.server === server.name && (
+                      <div style={{
+                        position: 'absolute',
+                        top: '12px',
+                        right: '12px',
+                        width: '24px',
+                        height: '24px',
+                        background: 'linear-gradient(135deg, #00d9ff, #00ff88)',
+                        borderRadius: '50%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '14px'
+                      }}>✓</div>
+                    )}
+
+                    {/* Server Header */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                      <span style={{ fontSize: '20px' }}>
+                        {server.reputation === 'trusted' ? '🟢' : server.reputation === 'dev' ? '🔧' : '🟡'}
+                      </span>
+                      <h3 style={{ margin: 0, color: isDarkMode ? '#fff' : '#000', fontSize: '16px', fontWeight: '600' }}>
+                        {server.name}
+                      </h3>
+                    </div>
+
+                    {/* Location */}
+                    <div style={{ color: '#00d9ff', fontSize: '13px', marginBottom: '8px' }}>
+                      {server.location}
+                    </div>
+
+                    {/* Category Badge */}
                     <div style={{
-                      position: 'absolute',
-                      top: '12px',
-                      right: '12px',
-                      width: '24px',
-                      height: '24px',
-                      background: 'linear-gradient(135deg, #00d9ff, #00ff88)',
-                      borderRadius: '50%',
+                      display: 'inline-block',
+                      padding: '4px 8px',
+                      background: 'rgba(0, 217, 255, 0.1)',
+                      border: '1px solid rgba(0, 217, 255, 0.3)',
+                      borderRadius: '4px',
+                      fontSize: '11px',
+                      color: '#00d9ff',
+                      marginBottom: '8px'
+                    }}>
+                      {server.category}
+                    </div>
+
+                    {/* Description */}
+                    <p style={{ color: isDarkMode ? '#888' : '#555', fontSize: '12px', margin: '8px 0', lineHeight: '1.4' }}>
+                      {server.description}
+                    </p>
+
+                    {/* Stats */}
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(3, 1fr)',
+                      gap: '8px',
+                      marginTop: '12px',
+                      paddingTop: '12px',
+                      borderTop: isDarkMode ? '1px solid #333' : '1px solid #e0e0e0'
+                    }}>
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ color: isDarkMode ? '#666' : '#999', fontSize: '10px', textTransform: 'uppercase' }}>Users</div>
+                        <div style={{ color: isDarkMode ? '#fff' : '#000', fontSize: '14px', fontWeight: '600' }}>
+                          {server.users.toLocaleString()}
+                        </div>
+                      </div>
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ color: isDarkMode ? '#666' : '#999', fontSize: '10px', textTransform: 'uppercase' }}>Uptime</div>
+                        <div style={{ color: '#00ff88', fontSize: '14px', fontWeight: '600' }}>
+                          {server.uptime}
+                        </div>
+                      </div>
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ color: isDarkMode ? '#666' : '#999', fontSize: '10px', textTransform: 'uppercase' }}>Ping</div>
+                        <div style={{ color: '#00d9ff', fontSize: '14px', fontWeight: '600' }}>
+                          {server.ping}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Moderation Badge */}
+                    <div style={{
+                      marginTop: '12px',
+                      padding: '6px 10px',
+                      background: server.moderation === 'Strict' ? 'rgba(255, 68, 68, 0.1)' :
+                        server.moderation === 'Moderate' ? 'rgba(255, 170, 0, 0.1)' :
+                          'rgba(0, 255, 136, 0.1)',
+                      border: `1px solid ${server.moderation === 'Strict' ? 'rgba(255, 68, 68, 0.3)' :
+                        server.moderation === 'Moderate' ? 'rgba(255, 170, 0, 0.3)' :
+                          'rgba(0, 255, 136, 0.3)'}`,
+                      borderRadius: '6px',
+                      fontSize: '11px',
+                      color: server.moderation === 'Strict' ? '#ff4444' :
+                        server.moderation === 'Moderate' ? '#ffaa00' : '#00ff88',
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '14px'
-                    }}>✓</div>
-                  )}
-
-                  {/* Server Header */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                    <span style={{ fontSize: '20px' }}>
-                      {server.reputation === 'trusted' ? '🟢' : server.reputation === 'dev' ? '🔧' : '🟡'}
-                    </span>
-                    <h3 style={{ margin: 0, color: isDarkMode ? '#fff' : '#000', fontSize: '16px', fontWeight: '600' }}>
-                      {server.name}
-                    </h3>
-                  </div>
-
-                  {/* Location */}
-                  <div style={{ color: '#00d9ff', fontSize: '13px', marginBottom: '8px' }}>
-                    {server.location}
-                  </div>
-
-                  {/* Category Badge */}
-                  <div style={{
-                    display: 'inline-block',
-                    padding: '4px 8px',
-                    background: 'rgba(0, 217, 255, 0.1)',
-                    border: '1px solid rgba(0, 217, 255, 0.3)',
-                    borderRadius: '4px',
-                    fontSize: '11px',
-                    color: '#00d9ff',
-                    marginBottom: '8px'
-                  }}>
-                    {server.category}
-                  </div>
-
-                  {/* Description */}
-                  <p style={{ color: isDarkMode ? '#888' : '#555', fontSize: '12px', margin: '8px 0', lineHeight: '1.4' }}>
-                    {server.description}
-                  </p>
-
-                  {/* Stats */}
-                  <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(3, 1fr)',
-                    gap: '8px',
-                    marginTop: '12px',
-                    paddingTop: '12px',
-                    borderTop: isDarkMode ? '1px solid #333' : '1px solid #e0e0e0'
-                  }}>
-                    <div style={{ textAlign: 'center' }}>
-                      <div style={{ color: isDarkMode ? '#666' : '#999', fontSize: '10px', textTransform: 'uppercase' }}>Users</div>
-                      <div style={{ color: isDarkMode ? '#fff' : '#000', fontSize: '14px', fontWeight: '600' }}>
-                        {server.users.toLocaleString()}
-                      </div>
-                    </div>
-                    <div style={{ textAlign: 'center' }}>
-                      <div style={{ color: isDarkMode ? '#666' : '#999', fontSize: '10px', textTransform: 'uppercase' }}>Uptime</div>
-                      <div style={{ color: '#00ff88', fontSize: '14px', fontWeight: '600' }}>
-                        {server.uptime}
-                      </div>
-                    </div>
-                    <div style={{ textAlign: 'center' }}>
-                      <div style={{ color: isDarkMode ? '#666' : '#999', fontSize: '10px', textTransform: 'uppercase' }}>Ping</div>
-                      <div style={{ color: '#00d9ff', fontSize: '14px', fontWeight: '600' }}>
-                        {server.ping}
-                      </div>
+                      gap: '6px'
+                    }}>
+                      <span>{server.moderation === 'Strict' ? '🛡️' : server.moderation === 'Moderate' ? '⚖️' : '🌿'}</span>
+                      {server.moderation} Moderation • {server.federation} Federation
                     </div>
                   </div>
-
-                  {/* Moderation Badge */}
-                  <div style={{
-                    marginTop: '12px',
-                    padding: '6px 10px',
-                    background: server.moderation === 'Strict' ? 'rgba(255, 68, 68, 0.1)' :
-                      server.moderation === 'Moderate' ? 'rgba(255, 170, 0, 0.1)' :
-                        'rgba(0, 255, 136, 0.1)',
-                    border: `1px solid ${server.moderation === 'Strict' ? 'rgba(255, 68, 68, 0.3)' :
-                      server.moderation === 'Moderate' ? 'rgba(255, 170, 0, 0.3)' :
-                        'rgba(0, 255, 136, 0.3)'}`,
-                    borderRadius: '6px',
-                    fontSize: '11px',
-                    color: server.moderation === 'Strict' ? '#ff4444' :
-                      server.moderation === 'Moderate' ? '#ffaa00' : '#00ff88',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px'
-                  }}>
-                    <span>{server.moderation === 'Strict' ? '🛡️' : server.moderation === 'Moderate' ? '⚖️' : '🌿'}</span>
-                    {server.moderation} Moderation • {server.federation} Federation
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {filteredServers.length === 0 && (
-              <div style={{ textAlign: 'center', padding: '40px', color: isDarkMode ? '#666' : '#999' }}>
-                <p>No servers found matching your criteria</p>
+                ))}
               </div>
-            )}
 
-            <div className="form-buttons" style={{ marginTop: '20px' }}>
-              <button
-                className={`btn-primary ${!formData.server ? 'disabled' : ''}`}
-                onClick={nextStep}
-                disabled={!formData.server}
-                style={{
-                  background: formData.server ? 'linear-gradient(135deg, #00d9ff, #00ff88)' : '#333',
-                  color: formData.server ? '#000' : '#666'
-                }}
-              >
-                Continue with {formData.server || 'selected server'} →
-              </button>
+              {filteredServers.length === 0 && (
+                <div style={{ textAlign: 'center', padding: '40px', color: isDarkMode ? '#666' : '#999' }}>
+                  <p>No servers found matching your criteria</p>
+                </div>
+              )}
+
+              <div className="form-buttons" style={{ marginTop: '20px' }}>
+                <button
+                  className={`btn-primary ${!formData.server ? 'disabled' : ''}`}
+                  onClick={nextStep}
+                  disabled={!formData.server}
+                  style={{
+                    background: formData.server ? 'linear-gradient(135deg, #00d9ff, #00ff88)' : '#333',
+                    color: formData.server ? '#000' : '#666'
+                  }}
+                >
+                  Continue with {formData.server || 'selected server'} →
+                </button>
+              </div>
             </div>
-          </div>
           </>
         )}
 
@@ -569,105 +570,105 @@ Your password is encrypted and stored securely. We never see or store your plain
             <div className="signup-form">
               <h2 className="step-title">Account Credentials 🔑</h2>
 
-            <div className="form-group">
-              <label htmlFor="username">Username:</label>
-              <input
-                id="username"
-                type="text"
-                name="username"
-                value={formData.username}
-                onChange={handleInputChange}
-                placeholder="your_username"
-                className="form-input"
-                autoComplete="username"
-              />
-              <small>This will be your public handle (letters, numbers, underscores)</small>
-            </div>
+              <div className="form-group">
+                <label htmlFor="username">Username:</label>
+                <input
+                  id="username"
+                  type="text"
+                  name="username"
+                  value={formData.username}
+                  onChange={handleInputChange}
+                  placeholder="your_username"
+                  className="form-input"
+                  autoComplete="username"
+                />
+                <small>This will be your public handle (letters, numbers, underscores)</small>
+              </div>
 
-            <div className="form-group">
-              <label htmlFor="email">Email:</label>
-              <input
-                id="email"
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleInputChange}
-                placeholder="you@example.com"
-                className="form-input"
-                autoComplete="email"
-              />
-              <small>For account recovery and notifications</small>
-            </div>
+              <div className="form-group">
+                <label htmlFor="email">Email:</label>
+                <input
+                  id="email"
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  placeholder="you@example.com"
+                  className="form-input"
+                  autoComplete="email"
+                />
+                <small>For account recovery and notifications</small>
+              </div>
 
-            <div className="form-group">
-              <label htmlFor="password">Password:</label>
-              <input
-                id="password"
-                type="password"
-                name="password"
-                value={formData.password}
-                onChange={handleInputChange}
-                placeholder="••••••••"
-                className="form-input"
-                autoComplete="new-password"
-              />
-              {formData.password && (
-                <div style={{ marginTop: '8px' }}>
-                  <div style={{
-                    height: '4px',
-                    background: isDarkMode ? '#333' : '#e0e0e0',
-                    borderRadius: '2px',
-                    overflow: 'hidden'
-                  }}>
+              <div className="form-group">
+                <label htmlFor="password">Password:</label>
+                <input
+                  id="password"
+                  type="password"
+                  name="password"
+                  value={formData.password}
+                  onChange={handleInputChange}
+                  placeholder="••••••••"
+                  className="form-input"
+                  autoComplete="new-password"
+                />
+                {formData.password && (
+                  <div style={{ marginTop: '8px' }}>
                     <div style={{
-                      width: `${(passwordStrength / 5) * 100}%`,
-                      height: '100%',
-                      background: getPasswordStrengthColor(),
-                      transition: 'all 0.3s'
-                    }} />
+                      height: '4px',
+                      background: isDarkMode ? '#333' : '#e0e0e0',
+                      borderRadius: '2px',
+                      overflow: 'hidden'
+                    }}>
+                      <div style={{
+                        width: `${(passwordStrength / 5) * 100}%`,
+                        height: '100%',
+                        background: getPasswordStrengthColor(),
+                        transition: 'all 0.3s'
+                      }} />
+                    </div>
+                    <small style={{ color: getPasswordStrengthColor() }}>
+                      Password strength: {getPasswordStrengthText()}
+                    </small>
                   </div>
-                  <small style={{ color: getPasswordStrengthColor() }}>
-                    Password strength: {getPasswordStrengthText()}
-                  </small>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
 
-            <div className="form-group">
-              <label htmlFor="confirmPassword">Confirm Password:</label>
-              <input
-                id="confirmPassword"
-                type="password"
-                name="confirmPassword"
-                value={formData.confirmPassword}
-                onChange={handleInputChange}
-                placeholder="••••••••"
-                className="form-input"
-                autoComplete="new-password"
-              />
-              {formData.confirmPassword && formData.password !== formData.confirmPassword && (
-                <small style={{ color: '#ff4444' }}>Passwords do not match</small>
-              )}
-              {formData.confirmPassword && formData.password === formData.confirmPassword && formData.password && (
-                <small style={{ color: '#00ff00' }}>✓ Passwords match</small>
-              )}
-            </div>
+              <div className="form-group">
+                <label htmlFor="confirmPassword">Confirm Password:</label>
+                <input
+                  id="confirmPassword"
+                  type="password"
+                  name="confirmPassword"
+                  value={formData.confirmPassword}
+                  onChange={handleInputChange}
+                  placeholder="••••••••"
+                  className="form-input"
+                  autoComplete="new-password"
+                />
+                {formData.confirmPassword && formData.password !== formData.confirmPassword && (
+                  <small style={{ color: '#ff4444' }}>Passwords do not match</small>
+                )}
+                {formData.confirmPassword && formData.password === formData.confirmPassword && formData.password && (
+                  <small style={{ color: '#00ff00' }}>✓ Passwords match</small>
+                )}
+              </div>
 
-            <div className="form-buttons">
-              <button
-                className="btn-secondary"
-                onClick={prevStep}
-              >
-                ← Back
-              </button>
-              <button
-                className="btn-primary"
-                onClick={nextStep}
-              >
-                Next →
-              </button>
+              <div className="form-buttons">
+                <button
+                  className="btn-secondary"
+                  onClick={prevStep}
+                >
+                  ← Back
+                </button>
+                <button
+                  className="btn-primary"
+                  onClick={nextStep}
+                >
+                  Next →
+                </button>
+              </div>
             </div>
-          </div>
           </>
         )}
 
@@ -696,153 +697,153 @@ This is optional - you can always add it later. If you generate it now, download
             />
 
             <div className="signup-form">
-            <h2 className="step-title">Decentralized Identity</h2>
-            <div className="security-banner" style={{
-              background: 'rgba(0, 217, 255, 0.1)',
-              border: '1px solid #00d9ff',
-              borderRadius: '8px',
-              padding: '12px',
-              marginBottom: '16px'
-            }}>
-              <span>ℹ️</span>
-              <p style={{ margin: '4px 0 0 0', fontSize: '14px' }}>
-                Generate a DID for enhanced security with cryptographic authentication.
-                This is <strong>optional</strong> - you can still use password login.
-              </p>
-            </div>
-
-            {!keyPair ? (
-              <div className="form-group">
-                <p className="form-description">
-                  Your decentralized identifier (DID) will be generated using WebCrypto and stored securely on your device.
+              <h2 className="step-title">Decentralized Identity</h2>
+              <div className="security-banner" style={{
+                background: 'rgba(0, 217, 255, 0.1)',
+                border: '1px solid #00d9ff',
+                borderRadius: '8px',
+                padding: '12px',
+                marginBottom: '16px'
+              }}>
+                <span>ℹ️</span>
+                <p style={{ margin: '4px 0 0 0', fontSize: '14px' }}>
+                  Generate a DID for enhanced security with cryptographic authentication.
+                  This is <strong>optional</strong> - you can still use password login.
                 </p>
-                <button
-                  className="btn-generate"
-                  onClick={handleGenerateDID}
-                  disabled={isLoading}
-                  style={{
-                    width: '100%',
-                    padding: '14px',
-                    background: 'linear-gradient(135deg, #00d9ff, #00ff88)',
-                    border: 'none',
-                    borderRadius: '8px',
-                    color: '#000',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    marginBottom: '12px'
-                  }}
-                >
-                  {isLoading ? 'Generating...' : '🔑 Generate Decentralized Identity'}
-                </button>
-                <button
-                  className="btn-secondary"
-                  onClick={nextStep}
-                  style={{ width: '100%' }}
-                >
-                  Skip - Use Password Only →
-                </button>
               </div>
-            ) : (
-              <div className="did-display">
-                <div className="did-section" style={{ marginBottom: '16px' }}>
-                  <label style={{ color: '#00d9ff', fontWeight: '600' }}>✅ Your DID (Public):</label>
-                  <div className="did-box" style={{
-                    background: 'rgba(0, 255, 136, 0.1)',
-                    border: '1px solid #00ff88',
-                    borderRadius: '8px',
-                    padding: '12px',
-                    marginTop: '8px',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center'
-                  }}>
-                    <code style={{ fontSize: '12px', wordBreak: 'break-all' }}>{keyPair.did}</code>
-                    <button
-                      className="copy-btn"
-                      onClick={() => navigator.clipboard.writeText(keyPair.did)}
-                      style={{
-                        background: 'none',
-                        border: '1px solid #00ff88',
-                        color: '#00ff88',
-                        padding: '4px 8px',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        marginLeft: '8px'
-                      }}
-                    >
-                      📋 Copy
-                    </button>
-                  </div>
-                </div>
 
-                <div className="did-section" style={{ marginBottom: '16px' }}>
-                  <label style={{ color: isDarkMode ? '#888' : '#555' }}>Private Key:</label>
-                  <div className="did-box locked" style={{
-                    background: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
-                    border: isDarkMode ? '1px solid #444' : '1px solid #ddd',
-                    borderRadius: '8px',
-                    padding: '12px',
-                    marginTop: '8px',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center'
-                  }}>
-                    <code>••••••••••••••••••••••••••••••••</code>
-                    <span className="lock-icon">🔒 Stored Securely</span>
-                  </div>
-                </div>
-
-                <div className="security-banner" style={{
-                  background: 'rgba(255, 170, 0, 0.1)',
-                  border: '1px solid #ffaa00',
-                  borderRadius: '8px',
-                  padding: '12px',
-                  marginBottom: '16px'
-                }}>
-                  <span>⚠️</span>
-                  <p style={{ margin: '4px 0 0 0', fontSize: '14px' }}>
-                    Download your recovery file! If you lose this device, you'll need it to recover your DID.
+              {!keyPair ? (
+                <div className="form-group">
+                  <p className="form-description">
+                    Your decentralized identifier (DID) will be generated using WebCrypto and stored securely on your device.
                   </p>
+                  <button
+                    className="btn-generate"
+                    onClick={handleGenerateDID}
+                    disabled={isLoading}
+                    style={{
+                      width: '100%',
+                      padding: '14px',
+                      background: 'linear-gradient(135deg, #00d9ff, #00ff88)',
+                      border: 'none',
+                      borderRadius: '8px',
+                      color: '#000',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      marginBottom: '12px'
+                    }}
+                  >
+                    {isLoading ? 'Generating...' : '🔑 Generate Decentralized Identity'}
+                  </button>
+                  <button
+                    className="btn-secondary"
+                    onClick={nextStep}
+                    style={{ width: '100%' }}
+                  >
+                    Skip - Use Password Only →
+                  </button>
                 </div>
+              ) : (
+                <div className="did-display">
+                  <div className="did-section" style={{ marginBottom: '16px' }}>
+                    <label style={{ color: '#00d9ff', fontWeight: '600' }}>✅ Your DID (Public):</label>
+                    <div className="did-box" style={{
+                      background: 'rgba(0, 255, 136, 0.1)',
+                      border: '1px solid #00ff88',
+                      borderRadius: '8px',
+                      padding: '12px',
+                      marginTop: '8px',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center'
+                    }}>
+                      <code style={{ fontSize: '12px', wordBreak: 'break-all' }}>{keyPair.did}</code>
+                      <button
+                        className="copy-btn"
+                        onClick={() => navigator.clipboard.writeText(keyPair.did)}
+                        style={{
+                          background: 'none',
+                          border: '1px solid #00ff88',
+                          color: '#00ff88',
+                          padding: '4px 8px',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          marginLeft: '8px'
+                        }}
+                      >
+                        📋 Copy
+                      </button>
+                    </div>
+                  </div>
 
-                <button
-                  className="btn-recovery"
-                  onClick={handleDownloadRecovery}
-                  disabled={!formData.username}
-                  style={{
-                    width: '100%',
-                    padding: '12px',
-                    background: 'rgba(255, 170, 0, 0.2)',
+                  <div className="did-section" style={{ marginBottom: '16px' }}>
+                    <label style={{ color: isDarkMode ? '#888' : '#555' }}>Private Key:</label>
+                    <div className="did-box locked" style={{
+                      background: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+                      border: isDarkMode ? '1px solid #444' : '1px solid #ddd',
+                      borderRadius: '8px',
+                      padding: '12px',
+                      marginTop: '8px',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center'
+                    }}>
+                      <code>••••••••••••••••••••••••••••••••</code>
+                      <span className="lock-icon">🔒 Stored Securely</span>
+                    </div>
+                  </div>
+
+                  <div className="security-banner" style={{
+                    background: 'rgba(255, 170, 0, 0.1)',
                     border: '1px solid #ffaa00',
                     borderRadius: '8px',
-                    color: '#ffaa00',
-                    fontWeight: '600',
-                    cursor: formData.username ? 'pointer' : 'not-allowed',
+                    padding: '12px',
                     marginBottom: '16px'
-                  }}
-                >
-                  💾 Download Recovery File
-                </button>
-              </div>
-            )}
+                  }}>
+                    <span>⚠️</span>
+                    <p style={{ margin: '4px 0 0 0', fontSize: '14px' }}>
+                      Download your recovery file! If you lose this device, you'll need it to recover your DID.
+                    </p>
+                  </div>
 
-            <div className="form-buttons">
-              <button
-                className="btn-secondary"
-                onClick={prevStep}
-              >
-                ← Back
-              </button>
-              {keyPair && (
-                <button
-                  className="btn-primary"
-                  onClick={nextStep}
-                >
-                  Next →
-                </button>
+                  <button
+                    className="btn-recovery"
+                    onClick={handleDownloadRecovery}
+                    disabled={!formData.username}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      background: 'rgba(255, 170, 0, 0.2)',
+                      border: '1px solid #ffaa00',
+                      borderRadius: '8px',
+                      color: '#ffaa00',
+                      fontWeight: '600',
+                      cursor: formData.username ? 'pointer' : 'not-allowed',
+                      marginBottom: '16px'
+                    }}
+                  >
+                    💾 Download Recovery File
+                  </button>
+                </div>
               )}
+
+              <div className="form-buttons">
+                <button
+                  className="btn-secondary"
+                  onClick={prevStep}
+                >
+                  ← Back
+                </button>
+                {keyPair && (
+                  <button
+                    className="btn-primary"
+                    onClick={nextStep}
+                  >
+                    Next →
+                  </button>
+                )}
+              </div>
             </div>
-          </div>
           </>
         )}
 

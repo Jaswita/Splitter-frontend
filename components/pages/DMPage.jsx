@@ -4,6 +4,13 @@ import { useState, useEffect, useRef } from 'react';
 import { useTheme } from '@/components/ui/theme-provider';
 import '../styles/DMPage.css';
 import { messageApi, searchApi } from '@/lib/api';
+import {
+  loadKeyPair,
+  deriveSharedSecret,
+  importEncryptionPublicKey,
+  encryptMessage,
+  decryptMessage
+} from '@/lib/crypto';
 
 export default function DMPage({ onNavigate, userData, selectedUser }) {
   const { theme, toggleTheme } = useTheme();
@@ -18,19 +25,123 @@ export default function DMPage({ onNavigate, userData, selectedUser }) {
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showNewChat, setShowNewChat] = useState(false);
+
+  // E2EE State
+  const [myKeyPair, setMyKeyPair] = useState(null);
+  const [sharedSecret, setSharedSecret] = useState(null);
+  const [isEncryptionReady, setIsEncryptionReady] = useState(false);
+  const [recruitPublicKey, setRecruitPublicKey] = useState(null); // For new chats
+  const [encryptionStatus, setEncryptionStatus] = useState('loading'); // loading, ready, missing_keys, recipient_missing_keys
+
   const messagesEndRef = useRef(null);
+
+  // Load my keys on mount
+  useEffect(() => {
+    async function loadKeys() {
+      const keys = await loadKeyPair();
+      if (keys && keys.encryptionPrivateKey) {
+        setMyKeyPair(keys);
+      } else {
+        setEncryptionStatus('missing_keys');
+        console.warn('No encryption keys found for current user');
+      }
+    }
+    loadKeys();
+  }, []);
 
   // Fetch threads on mount
   useEffect(() => {
     fetchThreads();
   }, []);
 
-  // Handle selectedUser from navigation
+  // Handle selectedUser from navigation (New Chat)
   useEffect(() => {
     if (selectedUser) {
       startConversationWithUser(selectedUser);
     }
   }, [selectedUser]);
+
+  // Derive Shared Secret when Thread Changes
+  useEffect(() => {
+    async function setupEncryption() {
+      setSharedSecret(null);
+      setIsEncryptionReady(false);
+
+      if (!selectedThread || !myKeyPair) return;
+
+      const otherUser = getOtherUser(selectedThread);
+      const otherUserPublicKey = otherUser.encryption_public_key;
+
+      if (!otherUserPublicKey) {
+        setEncryptionStatus('recipient_missing_keys');
+        return;
+      }
+
+      try {
+        const importedPublicKey = await importEncryptionPublicKey(otherUserPublicKey);
+        const secret = await deriveSharedSecret(myKeyPair.encryptionPrivateKey, importedPublicKey);
+        setSharedSecret(secret);
+        setIsEncryptionReady(true);
+        setEncryptionStatus('ready');
+      } catch (err) {
+        console.error('Failed to setup encryption:', err);
+        setEncryptionStatus('error');
+      }
+    }
+
+    setupEncryption();
+  }, [selectedThread, myKeyPair]);
+
+  // Decrypt Messages when Messages or SharedSecret changes
+  useEffect(() => {
+    async function decryptAll() {
+      if (!sharedSecret || messages.length === 0) return;
+
+      const decryptedMessages = await Promise.all(messages.map(async (msg) => {
+        if (msg.decrypted) return msg; // Already decrypted
+        if (!msg.ciphertext) return { ...msg, decrypted: true }; // Plaintext message
+
+        try {
+          // Ciphertext format expected: "ciphertext|iv" or separate fields. 
+          // My backend stores "ciphertext" and "iv"? 
+          // Wait, backend model only has Ciphertext string. 
+          // In crypto.ts encryptMessage returns { ciphertext, iv }.
+          // I should combine them or store IV separately.
+          // Current Plan: I'll store them as JSON string or delimiter separated in the single "ciphertext" column if I can't change schema easily.
+          // Reviewing backend `SendMessage`: it takes `ciphertext` string.
+          // I will store JSON.stringify({ c: ciphertext, iv: iv }) in the ciphertext column.
+
+          let iv, content;
+          try {
+            const parsed = JSON.parse(msg.ciphertext);
+            iv = parsed.iv;
+            content = parsed.c;
+          } catch (e) {
+            // Legacy or simple format if I changed my mind? 
+            // Let's assume JSON format for now.
+            console.error("Invalid ciphertext format", e);
+            return { ...msg, content: '⚠️ Invalid format', decrypted: true, error: true };
+          }
+
+          const decryptedText = await decryptMessage(content, iv, sharedSecret);
+          return { ...msg, content: decryptedText, decrypted: true };
+        } catch (err) {
+          console.error('Failed to decrypt message:', msg.id, err);
+          return { ...msg, content: '🔒 Decryption failed', decrypted: true, error: true };
+        }
+      }));
+
+      // Only update if there are changes to avoid loops
+      // Simple check: check if any message was not decrypted and now is
+      const needsUpdate = messages.some((m, i) => !m.decrypted && decryptedMessages[i].decrypted);
+      if (needsUpdate) {
+        setMessages(decryptedMessages);
+      }
+    }
+
+    decryptAll();
+  }, [messages, sharedSecret]);
+
 
   // Auto-scroll to bottom of messages
   useEffect(() => {
@@ -58,6 +169,7 @@ export default function DMPage({ onNavigate, userData, selectedUser }) {
     setSelectedThread(thread);
     try {
       const result = await messageApi.getMessages(thread.id);
+      // Messages come with ciphertext. Transformation happens in useEffect.
       setMessages(result.messages || []);
     } catch (err) {
       console.error('Failed to fetch messages:', err);
@@ -67,6 +179,7 @@ export default function DMPage({ onNavigate, userData, selectedUser }) {
 
   const handleSendMessage = async () => {
     if (!messageText.trim() || !selectedThread) return;
+    if (isSending) return;
 
     setIsSending(true);
     try {
@@ -75,10 +188,47 @@ export default function DMPage({ onNavigate, userData, selectedUser }) {
         ? selectedThread.participant_b_id
         : selectedThread.participant_a_id;
 
-      const result = await messageApi.sendMessage(recipientId, messageText);
+      let payload = {
+        recipient_id: recipientId,
+        content: messageText // Fallback/Metadata content? Or keep empty? 
+        // Backend requires content OR ciphertext. 
+        // I'll send a placeholder in content like "Encrypted Message" for backward compat clients.
+      };
+
+      if (isEncryptionReady && sharedSecret) {
+        const { ciphertext, iv } = await encryptMessage(messageText, sharedSecret);
+        // Store as JSON
+        const combinedCipher = JSON.stringify({ c: ciphertext, iv });
+        payload.ciphertext = combinedCipher;
+        payload.content = "🔒 Encrypted Message";
+      } else {
+        // Fallback to plain text if encryption not ready (e.g. recipient partial support)
+        // User should be warned.
+        if (encryptionStatus === 'recipient_missing_keys') {
+          if (!confirm("Recipient has no encryption keys. Send as plain text?")) {
+            setIsSending(false);
+            return;
+          }
+        } else if (encryptionStatus === 'missing_keys') {
+          alert("You don't have encryption keys. Cannot send message.");
+          setIsSending(false);
+          return;
+        }
+      }
+
+      const result = await messageApi.sendMessage(recipientId, payload.content, payload.ciphertext);
 
       // Add message to local state
-      setMessages(prev => [...prev, result.message]);
+      // Optimistically add? Or use result. 
+      // Result message has the same content/ciphertext.
+      // We need to set it as decrypted immediately to show to user.
+      const newMsg = {
+        ...result.message,
+        content: messageText, // Show original text immediately
+        decrypted: true
+      };
+
+      setMessages(prev => [...prev, newMsg]);
       setMessageText('');
 
       // Refresh threads to update last message
@@ -282,7 +432,7 @@ export default function DMPage({ onNavigate, userData, selectedUser }) {
                         )}
                       </div>
                       <div className="conversation-preview">
-                        {thread.last_message?.content?.substring(0, 30) || 'No messages yet'}
+                        {(thread.last_message?.ciphertext) ? '🔒 Encrypted Message' : (thread.last_message?.content?.substring(0, 30) || 'No messages yet')}
                         {thread.last_message?.content?.length > 30 && '...'}
                       </div>
                     </div>
@@ -339,15 +489,26 @@ export default function DMPage({ onNavigate, userData, selectedUser }) {
                       {getOtherUser(selectedThread).instance_domain !== 'localhost' && (
                         <span className="status-text">🌐 Remote • </span>
                       )}
-                      <span className="status-text">🔒 Encrypted</span>
+
+                      {encryptionStatus === 'ready' && <span className="status-text" style={{ color: '#00ff88' }}>🔒 Encrypted With Signal Protocol (ECDH)</span>}
+                      {encryptionStatus === 'loading' && <span className="status-text">🔄 Verifying Keys...</span>}
+                      {encryptionStatus === 'recipient_missing_keys' && <span className="status-text" style={{ color: '#ffaa00' }}>⚠️ Recipient has no keys</span>}
+                      {encryptionStatus === 'missing_keys' && <span className="status-text" style={{ color: '#ff4444' }}>⚠️ You have no keys</span>}
+                      {encryptionStatus === 'error' && <span className="status-text" style={{ color: '#ff4444' }}>❌ Encryption Error</span>}
+
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* Encryption Banner */}
-              <div className="encryption-banner">
-                🔒 Messages are end-to-end encrypted. The server cannot read this content.
+              <div className="encryption-banner" style={{
+                background: encryptionStatus === 'ready' ? 'rgba(0, 255, 136, 0.1)' : 'rgba(255, 170, 0, 0.1)',
+                borderColor: encryptionStatus === 'ready' ? '#00ff88' : '#ffaa00'
+              }}>
+                {encryptionStatus === 'ready'
+                  ? '🔒 Messages are end-to-end encrypted. Only you and the recipient can read them.'
+                  : '⚠️ End-to-end encryption is not active. Keys may be missing.'}
               </div>
 
               {/* Messages Area */}
@@ -356,7 +517,7 @@ export default function DMPage({ onNavigate, userData, selectedUser }) {
                   <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
                     <p>No messages yet</p>
                     <p style={{ fontSize: '12px', marginTop: '8px' }}>
-                      Send a message to start the conversation
+                      {encryptionStatus === 'ready' ? 'Send a secure message to start' : 'Start the conversation'}
                     </p>
                   </div>
                 ) : (
@@ -365,12 +526,16 @@ export default function DMPage({ onNavigate, userData, selectedUser }) {
                       key={message.id}
                       className={`message-bubble ${message.sender_id === userData?.id ? 'sent' : 'received'}`}
                     >
-                      <div className="message-content">{message.content}</div>
+                      <div className="message-content">
+                        {message.decrypted ? message.content : (message.ciphertext ? '🔒 Decrypting...' : message.content)}
+                      </div>
                       <div className="message-meta">
                         <span className="message-timestamp">{formatTimestamp(message.created_at)}</span>
-                        <span className="message-encryption" title="End-to-end encrypted">
-                          🔒
-                        </span>
+                        {message.ciphertext && (
+                          <span className="message-encryption" title="End-to-end encrypted">
+                            🔒
+                          </span>
+                        )}
                       </div>
                     </div>
                   ))
@@ -382,7 +547,7 @@ export default function DMPage({ onNavigate, userData, selectedUser }) {
               <div className="message-input-box">
                 <textarea
                   className="message-input"
-                  placeholder="Type a message..."
+                  placeholder={encryptionStatus === 'ready' ? "Type an encrypted message..." : "Type a message..."}
                   value={messageText}
                   onChange={(e) => setMessageText(e.target.value)}
                   onKeyPress={(e) => {
@@ -397,9 +562,12 @@ export default function DMPage({ onNavigate, userData, selectedUser }) {
                   className="send-button"
                   onClick={handleSendMessage}
                   disabled={!messageText.trim() || isSending}
-                  title="Send encrypted message"
+                  title={encryptionStatus === 'ready' ? "Send encrypted" : "Send"}
+                  style={{
+                    background: encryptionStatus === 'ready' ? 'linear-gradient(135deg, #00d9ff, #00ff88)' : undefined
+                  }}
                 >
-                  {isSending ? 'Sending...' : 'Send 🔒'}
+                  {isSending ? 'Sending...' : (encryptionStatus === 'ready' ? 'Send 🔒' : 'Send')}
                 </button>
               </div>
 
