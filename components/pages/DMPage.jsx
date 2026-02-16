@@ -32,6 +32,7 @@ export default function DMPage({ onNavigate, userData, selectedUser }) {
   const [isEncryptionReady, setIsEncryptionReady] = useState(false);
   const [recruitPublicKey, setRecruitPublicKey] = useState(null); // For new chats
   const [encryptionStatus, setEncryptionStatus] = useState('loading'); // loading, ready, missing_keys, recipient_missing_keys
+  const [decryptedPreviews, setDecryptedPreviews] = useState({}); // Store decrypted previews by thread ID
 
   const messagesEndRef = useRef(null);
 
@@ -147,6 +148,38 @@ export default function DMPage({ onNavigate, userData, selectedUser }) {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Decrypt last message preview for conversation list
+  useEffect(() => {
+    async function decryptPreviews() {
+      if (!myKeyPair || threads.length === 0) return;
+
+      const newPreviews = {};
+
+      for (const thread of threads) {
+        if (!thread.last_message?.ciphertext) continue;
+
+        const otherUser = getOtherUser(thread);
+        if (!otherUser.encryption_public_key) continue;
+
+        try {
+          const importedPublicKey = await importEncryptionPublicKey(otherUser.encryption_public_key);
+          const secret = await deriveSharedSecret(myKeyPair.encryptionPrivateKey, importedPublicKey);
+
+          const parsed = JSON.parse(thread.last_message.ciphertext);
+          const decryptedText = await decryptMessage(parsed.c, parsed.iv, secret);
+          newPreviews[thread.id] = decryptedText.substring(0, 30) + (decryptedText.length > 30 ? '...' : '');
+        } catch (err) {
+          console.error('Failed to decrypt preview for thread', thread.id, err);
+          newPreviews[thread.id] = '🔒 Encrypted message';
+        }
+      }
+
+      setDecryptedPreviews(newPreviews);
+    }
+
+    decryptPreviews();
+  }, [threads, myKeyPair]);
 
   const fetchThreads = async () => {
     setIsLoading(true);
@@ -432,8 +465,9 @@ export default function DMPage({ onNavigate, userData, selectedUser }) {
                         )}
                       </div>
                       <div className="conversation-preview">
-                        {(thread.last_message?.ciphertext) ? '🔒 Encrypted Message' : (thread.last_message?.content?.substring(0, 30) || 'No messages yet')}
-                        {thread.last_message?.content?.length > 30 && '...'}
+                        {thread.last_message?.ciphertext
+                          ? (decryptedPreviews[thread.id] || '🔒 Decrypting...')
+                          : (thread.last_message?.content?.substring(0, 30) || 'No messages yet') + (thread.last_message?.content?.length > 30 ? '...' : '')}
                       </div>
                     </div>
                     {thread.unread_count > 0 && (
@@ -569,18 +603,6 @@ export default function DMPage({ onNavigate, userData, selectedUser }) {
                 >
                   {isSending ? 'Sending...' : (encryptionStatus === 'ready' ? 'Send 🔒' : 'Send')}
                 </button>
-              </div>
-
-              {/* Disabled Features */}
-              <div className="disabled-features">
-                <button className="feature-button disabled" disabled>
-                  📎 Attachments
-                </button>
-                <span className="feature-tooltip">Sprint 2</span>
-                <button className="feature-button disabled" disabled>
-                  🔄 Multi-device Sync
-                </button>
-                <span className="feature-tooltip">Sprint 2</span>
               </div>
             </>
           )}
