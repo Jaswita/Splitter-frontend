@@ -404,6 +404,23 @@ export const messageApi = {
     return handleResponse<{ message: any, thread: any, recipient: any }>(response);
   },
 
+  async deleteMessage(messageId: string) {
+    const response = await fetch(`${API_BASE}/messages/${messageId}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    });
+    return handleResponse<{ message: string }>(response);
+  },
+
+  async editMessage(messageId: string, content: string, ciphertext?: string) {
+    const response = await fetch(`${API_BASE}/messages/${messageId}`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ content, ciphertext })
+    });
+    return handleResponse<{ message: string }>(response);
+  },
+
   async startConversation(userId: string) {
     const response = await fetch(`${API_BASE}/messages/conversation/${userId}`, {
       method: 'POST',

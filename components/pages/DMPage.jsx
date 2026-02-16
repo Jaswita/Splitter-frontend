@@ -33,6 +33,8 @@ export default function DMPage({ onNavigate, userData, selectedUser }) {
   const [recruitPublicKey, setRecruitPublicKey] = useState(null); // For new chats
   const [encryptionStatus, setEncryptionStatus] = useState('loading'); // loading, ready, missing_keys, recipient_missing_keys
   const [decryptedPreviews, setDecryptedPreviews] = useState({}); // Store decrypted previews by thread ID
+  const [editingMessageId, setEditingMessageId] = useState(null);
+  const [editMessage, setEditMessage] = useState('');
 
   const messagesEndRef = useRef(null);
 
@@ -180,6 +182,64 @@ export default function DMPage({ onNavigate, userData, selectedUser }) {
 
     decryptPreviews();
   }, [threads, myKeyPair]);
+
+  // Check if message is deletable/editable (within 3 hours)
+  const canModifyMessage = (createdAt) => {
+    const now = new Date();
+    const messageTime = new Date(createdAt);
+    const hoursSince = (now - messageTime) / (1000 * 60 * 60);
+    return hoursSince < 3;
+  };
+
+  const handleDeleteMessage = async (messageId) => {
+    if (!confirm('Delete this message? This cannot be undone.')) return;
+
+    try {
+      await messageApi.deleteMessage(messageId);
+      // Refresh messages
+      if (selectedThread) {
+        await selectThread(selectedThread);
+      }
+      // Refresh thread list to update preview
+      await fetchThreads();
+    } catch (err) {
+      console.error('Failed to delete message:', err);
+      alert('Failed to delete message: ' + (err.response?.data?.error || err.message));
+    }
+  };
+
+  const handleEditMessage = async (messageId, originalMessage) => {
+    setEditingMessageId(messageId);
+    setEditMessage(originalMessage.content || '');
+  };
+
+  const submitEdit = async (messageId) => {
+    if (!editMessage.trim()) return;
+
+    try {
+      let ciphertext = '';
+
+      // Re-encrypt if this was an encrypted message
+      if (encryptionStatus === 'ready' && sharedSecret) {
+        const { ciphertext: encrypted, iv } = await encryptMessage(editMessage, sharedSecret);
+        ciphertext = JSON.stringify({ c: encrypted, iv });
+      }
+
+      await messageApi.editMessage(messageId, editMessage, ciphertext);
+      setEditingMessageId(null);
+      setEditMessage('');
+
+      // Refresh messages
+      if (selectedThread) {
+        await selectThread(selectedThread);
+      }
+      // Refresh thread list to update preview
+      await fetchThreads();
+    } catch (err) {
+      console.error('Failed to edit message:', err);
+      alert('Failed to edit message: ' + (err.response?.data?.error || err.message));
+    }
+  };
 
   const fetchThreads = async () => {
     setIsLoading(true);
@@ -465,7 +525,9 @@ export default function DMPage({ onNavigate, userData, selectedUser }) {
                         )}
                       </div>
                       <div className="conversation-preview">
-                        {thread.last_message?.ciphertext
+                        {thread.last_message?.deleted_at ? (
+                          <span style={{ fontStyle: 'italic', opacity: 0.6 }}>Message deleted</span>
+                        ) : thread.last_message?.ciphertext
                           ? (decryptedPreviews[thread.id] || '🔒 Decrypting...')
                           : (thread.last_message?.content?.substring(0, 30) || 'No messages yet') + (thread.last_message?.content?.length > 30 ? '...' : '')}
                       </div>
@@ -548,31 +610,127 @@ export default function DMPage({ onNavigate, userData, selectedUser }) {
               {/* Messages Area */}
               <div className="messages-area">
                 {messages.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
-                    <p>No messages yet</p>
-                    <p style={{ fontSize: '12px', marginTop: '8px' }}>
-                      {encryptionStatus === 'ready' ? 'Send a secure message to start' : 'Start the conversation'}
-                    </p>
+                  <div style={{ padding: '40px', textAlign: 'center', color: '#666' }}>
+                    <p>No messages yet. Start the conversation!</p>
                   </div>
                 ) : (
-                  messages.map((message) => (
-                    <div
-                      key={message.id}
-                      className={`message-bubble ${message.sender_id === userData?.id ? 'sent' : 'received'}`}
-                    >
-                      <div className="message-content">
-                        {message.decrypted ? message.content : (message.ciphertext ? '🔒 Decrypting...' : message.content)}
-                      </div>
-                      <div className="message-meta">
-                        <span className="message-timestamp">{formatTimestamp(message.created_at)}</span>
-                        {message.ciphertext && (
-                          <span className="message-encryption" title="End-to-end encrypted">
-                            🔒
-                          </span>
+                  messages.map((msg) => {
+                    const isSent = msg.sender_id === userData?.id;
+                    const canModify = isSent && canModifyMessage(msg.created_at);
+                    const isDeleted = msg.deleted_at;
+                    const isEdited = msg.edited_at;
+
+                    return (
+                      <div
+                        key={msg.id}
+                        className={`message-bubble ${isSent ? 'sent' : 'received'}`}
+                      >
+                        {isDeleted ? (
+                          <div className="message-content" style={{ fontStyle: 'italic', opacity: 0.6 }}>
+                            {isSent ? 'You deleted this message' : 'This message was deleted'}
+                          </div>
+                        ) : editingMessageId === msg.id ? (
+                          <div>
+                            <textarea
+                              value={editMessage}
+                              onChange={(e) => setEditMessage(e.target.value)}
+                              style={{
+                                width: '100%',
+                                minHeight: '60px',
+                                padding: '8px',
+                                borderRadius: '6px',
+                                border: '1px solid #333',
+                                background: 'rgba(0,0,0,0.3)',
+                                color: '#fff',
+                                fontSize: '14px',
+                                fontFamily: 'inherit'
+                              }}
+                            />
+                            <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                              <button
+                                onClick={() => submitEdit(msg.id)}
+                                style={{
+                                  padding: '4px 12px',
+                                  background: '#00d9ff',
+                                  border: 'none',
+                                  borderRadius: '4px',
+                                  color: '#000',
+                                  cursor: 'pointer',
+                                  fontSize: '12px',
+                                  fontWeight: '600'
+                                }}
+                              >
+                                Save
+                              </button>
+                              <button
+                                onClick={() => { setEditingMessageId(null); setEditMessage(''); }}
+                                style={{
+                                  padding: '4px 12px',
+                                  background: 'transparent',
+                                  border: '1px solid #666',
+                                  borderRadius: '4px',
+                                  color: '#999',
+                                  cursor: 'pointer',
+                                  fontSize: '12px'
+                                }}
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="message-content">
+                              {msg.content}
+                              {isEdited && (
+                                <span style={{ marginLeft: '6px', fontSize: '11px', opacity: 0.7 }}>✏️ Edited</span>
+                              )}
+                            </div>
+                            <div className="message-meta">
+                              <span className="message-timestamp">
+                                {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                              {msg.ciphertext && <span className="message-encryption" title="End-to-end encrypted">🔒</span>}
+                            </div>
+                            {canModify && !isDeleted && (
+                              <div style={{ display: 'flex', gap: '6px', marginTop: '8px', fontSize: '11px' }}>
+                                <button
+                                  onClick={() => handleEditMessage(msg.id, msg)}
+                                  style={{
+                                    padding: '2px 8px',
+                                    background: 'rgba(255,255,255,0.1)',
+                                    border: '1px solid rgba(255,255,255,0.2)',
+                                    borderRadius: '3px',
+                                    color: '#fff',
+                                    cursor: 'pointer',
+                                    fontSize: '10px'
+                                  }}
+                                  title="Edit (within 3 hours)"
+                                >
+                                  ✏️ Edit
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteMessage(msg.id)}
+                                  style={{
+                                    padding: '2px 8px',
+                                    background: 'rgba(255,68,68,0.2)',
+                                    border: '1px solid rgba(255,68,68,0.4)',
+                                    borderRadius: '3px',
+                                    color: '#ff4444',
+                                    cursor: 'pointer',
+                                    fontSize: '10px'
+                                  }}
+                                  title="Delete (within 3 hours)"
+                                >
+                                  🗑️ Delete
+                                </button>
+                              </div>
+                            )}
+                          </>
                         )}
                       </div>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
                 <div ref={messagesEndRef} />
               </div>
