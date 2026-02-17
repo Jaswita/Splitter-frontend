@@ -6,12 +6,14 @@ import '../styles/DMPage.css';
 import { messageApi, searchApi, userApi } from '@/lib/api';
 import {
   loadKeyPair,
+  loadEncryptionKeys,
   generateKeyPair,
   deriveSharedSecret,
   importEncryptionPublicKey,
   encryptMessage,
   decryptMessage
 } from '@/lib/crypto';
+
 
 export default function DMPage({ onNavigate, userData, selectedUser }) {
   const { theme, toggleTheme } = useTheme();
@@ -42,9 +44,34 @@ export default function DMPage({ onNavigate, userData, selectedUser }) {
   // Load my keys on mount
   useEffect(() => {
     async function loadKeys() {
-      const keys = await loadKeyPair();
+      // Try loading full keypair first (for DID users with signing keys)
+      let keys = await loadKeyPair();
+
+      // Fallback to loading only encryption keys (for username/password users)
+      if (!keys || !keys.encryptionPrivateKey) {
+        const encKeys = await loadEncryptionKeys();
+        if (encKeys && encKeys.encryptionPrivateKey) {
+          // Convert to KeyPair format for compatibility
+          keys = {
+            publicKey: null,
+            privateKey: null,
+            publicKeyBase64: '',
+            privateKeyBase64: '',
+            did: '',
+            encryptionPrivateKey: encKeys.encryptionPrivateKey,
+            encryptionPublicKey: encKeys.encryptionPublicKey,
+            encryptionPrivateKeyBase64: encKeys.encryptionPrivateKeyBase64,
+            encryptionPublicKeyBase64: encKeys.encryptionPublicKeyBase64,
+          };
+          setMyKeyPair(keys);
+          console.log('Encryption keys loaded from localStorage (encryption-only mode)');
+          return;
+        }
+      }
+
       if (keys && keys.encryptionPrivateKey) {
         setMyKeyPair(keys);
+        console.log('Encryption keys loaded from localStorage (full keypair)');
       } else {
         setEncryptionStatus('missing_keys');
         console.warn('No encryption keys found for current user');

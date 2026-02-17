@@ -368,3 +368,27 @@ export async function importRecoveryFile(file: File): Promise<KeyPair> {
     reader.readAsText(file);
   });
 }
+// Load ONLY encryption keys (for users without DID/signing keys)
+export async function loadEncryptionKeys(): Promise<{ encryptionPrivateKey?: CryptoKey; encryptionPublicKey?: CryptoKey; encryptionPrivateKeyBase64?: string; encryptionPublicKeyBase64?: string } | null> {
+    const encryptionPrivateKeyBase64 = localStorage.getItem('encryption_private_key');
+    const encryptionPublicKeyBase64 = localStorage.getItem('encryption_public_key');
+
+    if (!encryptionPrivateKeyBase64 || !encryptionPublicKeyBase64) {
+        return null;
+    }
+
+    try {
+        const encryptionPrivateKey = await importEncryptionPrivateKey(encryptionPrivateKeyBase64);
+        const encryptionPublicKey = await importEncryptionPublicKey(encryptionPublicKeyBase64);
+
+        return {
+            encryptionPrivateKey,
+            encryptionPublicKey,
+            encryptionPrivateKeyBase64,
+            encryptionPublicKeyBase64,
+        };
+    } catch (error) {
+        console.error('Failed to load encryption keys:', error);
+        return null;
+    }
+}
