@@ -3,9 +3,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { useTheme } from '@/components/ui/theme-provider';
 import '../styles/DMPage.css';
-import { messageApi, searchApi } from '@/lib/api';
+import { messageApi, searchApi, userApi } from '@/lib/api';
 import {
   loadKeyPair,
+  generateKeyPair,
   deriveSharedSecret,
   importEncryptionPublicKey,
   encryptMessage,
@@ -267,6 +268,38 @@ export default function DMPage({ onNavigate, userData, selectedUser }) {
     } catch (err) {
       console.error('Failed to fetch messages:', err);
       setMessages([]);
+    }
+  };
+
+  const handleGenerateEncryptionKeys = async () => {
+    try {
+      // Generate new key pair (includes both signing and encryption keys)
+      const keyPair = await generateKeyPair();
+
+      // Use the encryption keys from the generated keypair
+      const publicKeyBase64 = keyPair.encryptionPublicKeyBase64;
+      const privateKeyBase64 = keyPair.encryptionPrivateKeyBase64;
+
+      if (!publicKeyBase64 || !privateKeyBase64) {
+        throw new Error('Failed to generate encryption keys');
+      }
+
+      // Update user's encryption key on backend
+      await userApi.updateEncryptionKey(publicKeyBase64);
+
+      // Store in localStorage (use same keys as loadKeyPair expects)
+      localStorage.setItem('encryption_public_key', publicKeyBase64);
+      localStorage.setItem('encryption_private_key', privateKeyBase64);
+
+      // Reload the key pair to update state properly
+      const loadedKeyPair = await loadKeyPair();
+      setMyKeyPair(loadedKeyPair);
+      setEncryptionStatus('ready');
+
+      alert('✅ Encryption keys generated successfully! E2E encryption is now active.');
+    } catch (err) {
+      console.error('Failed to generate encryption keys:', err);
+      alert('Failed to generate encryption keys: ' + err.message);
     }
   };
 
@@ -589,7 +622,27 @@ export default function DMPage({ onNavigate, userData, selectedUser }) {
                       {encryptionStatus === 'ready' && <span className="status-text" style={{ color: '#00ff88' }}>🔒 Encrypted With Signal Protocol (ECDH)</span>}
                       {encryptionStatus === 'loading' && <span className="status-text">🔄 Verifying Keys...</span>}
                       {encryptionStatus === 'recipient_missing_keys' && <span className="status-text" style={{ color: '#ffaa00' }}>⚠️ Recipient has no keys</span>}
-                      {encryptionStatus === 'missing_keys' && <span className="status-text" style={{ color: '#ff4444' }}>⚠️ You have no keys</span>}
+                      {encryptionStatus === 'missing_keys' && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span className="status-text" style={{ color: '#ff4444' }}>⚠️ No encryption keys</span>
+                          <button
+                            onClick={handleGenerateEncryptionKeys}
+                            style={{
+                              padding: '4px 12px',
+                              background: '#00d9ff',
+                              border: 'none',
+                              borderRadius: '4px',
+                              color: '#000',
+                              cursor: 'pointer',
+                              fontSize: '11px',
+                              fontWeight: '600'
+                            }}
+                            title="Generate encryption keys to enable E2E encryption"
+                          >
+                            🔐 Generate Keys & Enable E2E
+                          </button>
+                        </div>
+                      )}
                       {encryptionStatus === 'error' && <span className="status-text" style={{ color: '#ff4444' }}>❌ Encryption Error</span>}
 
                     </div>

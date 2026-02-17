@@ -158,6 +158,15 @@ export const userApi = {
     return handleResponse<any>(response);
   },
 
+  async updateEncryptionKey(encryptionPublicKey: string) {
+    const response = await fetch(`${API_BASE}/users/me/encryption-key`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ encryption_public_key: encryptionPublicKey })
+    });
+    return handleResponse<any>(response);
+  },
+
   async deleteAccount() {
     const response = await fetch(`${API_BASE}/users/me`, {
       method: 'DELETE',
