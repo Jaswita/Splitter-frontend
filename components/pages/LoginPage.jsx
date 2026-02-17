@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '@/components/ui/theme-provider';
 import '../styles/LoginPage.css';
-import { authApi, userApi } from '@/lib/api';
+import { authApi, userApi, setApiBase } from '@/lib/api';
 import { getStoredKeyPair, signChallenge, importRecoveryFile } from '@/lib/crypto';
 
 export default function LoginPage({ onNavigate, updateUserData, setIsAuthenticated }) {
@@ -11,7 +11,7 @@ export default function LoginPage({ onNavigate, updateUserData, setIsAuthenticat
   const isDarkMode = theme === 'dark';
   const [loginMethod, setLoginMethod] = useState('password'); // 'password' or 'did'
   const [formData, setFormData] = useState({
-    server: 'localhost',
+    server: 'splitter-1',
     username: '',
     password: '',
     did: ''
@@ -42,6 +42,10 @@ export default function LoginPage({ onNavigate, updateUserData, setIsAuthenticat
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
+    // When server changes, update API base URL
+    if (name === 'server') {
+      setApiBase(value);
+    }
   };
 
   // Password Login
@@ -240,10 +244,8 @@ export default function LoginPage({ onNavigate, updateUserData, setIsAuthenticat
               name="server"
               className="form-select"
             >
-              <option value="localhost">localhost (Development)</option>
-              <option value="federate.tech">federate.tech</option>
-              <option value="community.social">community.social</option>
-              <option value="creator.hub">creator.hub</option>
+              <option value="splitter-1">splitter-1 (localhost:8000)</option>
+              <option value="splitter-2">splitter-2 (localhost:8001)</option>
             </select>
           </div>
         )}
