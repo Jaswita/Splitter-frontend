@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import '../styles/HomePage.css';
-import { postApi, interactionApi, adminApi, searchApi, messageApi } from '@/lib/api';
+import { postApi, interactionApi, adminApi, searchApi, messageApi, federationApi, getCurrentInstance } from '@/lib/api';
 import HomePageWalkthrough from '@/components/ui/HomePageWalkthrough';
 
 // Sample posts for demo when no backend posts available
@@ -127,11 +127,56 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
 
     setIsSearching(true);
     try {
-      const result = await searchApi.searchUsers(searchQuery);
-      console.log('Search results:', result);
-      setSearchResults(result.users || []);
-      if (result.users && result.users.length > 0) {
-        console.log('First user object:', result.users[0]);
+      const current = getCurrentInstance();
+
+      // Search local users first
+      const localResult = await searchApi.searchUsers(searchQuery);
+      const localUsers = (localResult.users || [])
+        .map(u => {
+          const instanceDomain = u.instance_domain || '';
+          const isGhostRemote = instanceDomain && instanceDomain !== 'localhost' && instanceDomain !== current.domain;
+          return {
+            ...u,
+            is_remote: isGhostRemote,
+            domain: instanceDomain || current.domain,
+          };
+        })
+        .filter(u => !u.is_remote);
+
+      // Also search federated users
+      let federatedUsers = [];
+      try {
+        const fedResult = await federationApi.searchUsers(searchQuery);
+        federatedUsers = (fedResult.users || []).filter(u => u.is_remote).map(u => ({
+          ...u,
+          is_remote: true,
+        }));
+      } catch (fedErr) {
+        console.log('Federation search unavailable:', fedErr);
+      }
+
+      // Merge local + federated, deduplicate by id+domain
+      const seenUsernames = new Set();
+      const merged = [];
+      for (const u of localUsers) {
+        const key = `${u.id || ''}|${u.username}@${u.domain || u.instance_domain || 'local'}`;
+        if (!seenUsernames.has(key)) {
+          seenUsernames.add(key);
+          merged.push(u);
+        }
+      }
+      for (const u of federatedUsers) {
+        const key = `${u.id || ''}|${u.username}@${u.domain || 'remote'}`;
+        if (!seenUsernames.has(key)) {
+          seenUsernames.add(key);
+          merged.push(u);
+        }
+      }
+
+      console.log('Search results (merged):', merged);
+      setSearchResults(merged);
+      if (merged.length > 0) {
+        console.log('First user object:', merged[0]);
       }
       setShowSearchResults(true);
     } catch (err) {
@@ -166,9 +211,9 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
     }
   };
 
-  // Follow/Unfollow user
-  const handleFollowToggle = async (userId) => {
-    console.log('Follow toggle called for userId:', userId);
+  // Follow/Unfollow user (handles both local and remote users)
+  const handleFollowToggle = async (userId, user = null) => {
+    console.log('Follow toggle called for userId:', userId, 'user:', user);
     const isFollowing = followingUsers.has(userId);
 
     // Add to loading set
@@ -186,8 +231,14 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
           return next;
         });
       } else {
-        console.log('Following user:', userId);
-        await followApi.followUser(userId);
+        // For remote users, use federation follow
+        if (user && user.is_remote && user.username && user.domain) {
+          console.log('Federation following remote user:', `@${user.username}@${user.domain}`);
+          await federationApi.followRemoteUser(`${user.username}@${user.domain}`);
+        } else {
+          console.log('Following local user:', userId);
+          await followApi.followUser(userId);
+        }
         setFollowingUsers(prev => new Set(prev).add(userId));
       }
       console.log('Follow operation successful');
@@ -226,17 +277,24 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
         // Local tab: local_only = true
         feedPosts = await postApi.getPublicFeed(20, 0, true);
       } else if (activeTab === 'federated') {
-        // Federated tab: all public posts (local_only = false)
-        feedPosts = await postApi.getPublicFeed(20, 0, false);
+        // Federated tab: fetch from federation timeline (includes remote posts)
+        try {
+          const fedResult = await federationApi.getTimeline(50);
+          feedPosts = (fedResult.posts || []).filter(p => p.is_remote === true);
+        } catch (fedErr) {
+          console.error('Federation timeline failed, falling back:', fedErr);
+          feedPosts = await postApi.getPublicFeed(20, 0, false);
+        }
       }
 
       if (feedPosts && feedPosts.length > 0) {
+        const instanceInfo = getCurrentInstance();
         const transformedPosts = feedPosts.map(post => ({
           id: post.id,
-          author: post.username ? `${post.username}@localhost` : `${post.author_did?.split(':').pop() || 'unknown'}@local`,
+          author: post.username ? `${post.username}@${post.domain || instanceInfo.domain}` : `${post.author_did?.split(':').pop() || 'unknown'}@local`,
           authorId: post.author_id || post.user_id,
           avatar: post.avatar_url || '👤',
-          displayName: post.username || post.author_did?.split(':').pop() || 'Unknown',
+          displayName: post.display_name || post.username || post.author_did?.split(':').pop() || 'Unknown',
           handle: `@${post.username || post.author_did?.split(':').pop() || 'unknown'}`,
           timestamp: formatTimestamp(post.created_at),
           createdAt: post.created_at,
@@ -245,7 +303,9 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
           replies: post.total_reply_count || 0,
           boosts: post.repost_count || 0,
           likes: post.like_count || 0,
-          local: post.is_local !== undefined ? post.is_local : true,
+          local: post.is_remote !== undefined ? !post.is_remote : (post.is_local !== undefined ? post.is_local : true),
+          isRemote: post.is_remote || false,
+          domain: post.domain || instanceInfo.domain,
           visibility: post.visibility || 'public',
           liked: post.liked || false,
           reposted: post.reposted || false,
@@ -508,9 +568,9 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
                     No users found
                   </div>
                 ) : (
-                  searchResults.map(user => (
+                  searchResults.map((user, idx) => (
                     <div
-                      key={user.id}
+                      key={`${user.id || 'user'}-${user.domain || user.instance_domain || 'local'}-${idx}`}
                       style={{
                         padding: '12px 16px',
                         borderBottom: '1px solid #333',
@@ -549,11 +609,21 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
                           {user.avatar_url || '👤'}
                         </div>
                         <div style={{ flex: 1 }}>
-                          <div style={{ color: '#fff', fontWeight: '600' }}>
+                          <div style={{ color: '#fff', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px' }}>
                             {user.display_name || user.username}
+                            {user.is_remote && (
+                              <span style={{
+                                fontSize: '10px',
+                                padding: '1px 6px',
+                                background: 'rgba(255,136,0,0.2)',
+                                color: '#ff8800',
+                                borderRadius: '4px',
+                                border: '1px solid rgba(255,136,0,0.3)'
+                              }}>🌐 {user.domain || 'Remote'}</span>
+                            )}
                           </div>
                           <div style={{ color: '#666', fontSize: '12px' }}>
-                            @{user.username}@{user.instance_domain}
+                            @{user.username}@{user.domain || user.instance_domain || 'local'}
                           </div>
                         </div>
                       </div>
@@ -561,7 +631,7 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
                         onClick={(e) => {
                           e.stopPropagation();
                           console.log('Follow button clicked for user:', user);
-                          handleFollowToggle(user.id);
+                          handleFollowToggle(user.id, user);
                         }}
                         disabled={followLoading.has(user.id)}
                         style={{
@@ -907,17 +977,17 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
 
           {/* Posts */}
           <div className="feed-posts posts-list">
-            {posts.map(post => (
-              <article key={post.id} className={`post ${post.local ? 'local' : 'remote'}`}>
+            {posts.map((post, idx) => (
+              <article key={`${post.id}-${post.authorId || post.author_did || 'author'}-${post.createdAt || idx}`} className={`post ${post.local ? 'local' : 'remote'}`}>
                 <div className="post-header">
                   <div className="post-author" style={{ cursor: 'pointer' }} onClick={() => onNavigate('profile')}>
                     <span className="post-avatar">{post.avatar}</span>
                     <div className="post-meta">
                       <div className="post-name-line">
                         <strong>{post.displayName}</strong>
-                        <span className="post-handle">{post.handle}</span>
-                        {post.local && <span className="post-badge local" title="This post is from your local instance (localhost)">Local</span>}
-                        {!post.local && <span className="post-badge remote" title="This post is from a remote federated instance">🌐 Remote</span>}
+                        <span className="post-handle">{post.handle}{post.isRemote && post.domain ? `@${post.domain}` : ''}</span>
+                        {!post.isRemote && <span className="post-badge local" title="This post is from your local instance">Local</span>}
+                        {post.isRemote && <span className="post-badge remote" title={`This post is from ${post.domain || 'a remote instance'}`}>🌐 {post.domain || 'Remote'}</span>}
                         {/* Edited Badge */}
                         {isEdited(post) && (
                           <span

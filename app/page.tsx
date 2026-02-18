@@ -130,6 +130,9 @@ export default function App() {
     localStorage.removeItem('private_key');
     localStorage.removeItem('public_key');
     localStorage.removeItem('did');
+    localStorage.removeItem('splitter_api_base');
+    localStorage.removeItem('splitter_instance');
+    localStorage.removeItem('user');
     setIsAuthenticated(false);
     setUserData({
       id: '',

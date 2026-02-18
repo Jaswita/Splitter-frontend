@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useTheme } from '@/components/ui/theme-provider';
 import '../styles/DMPage.css';
-import { messageApi, searchApi, userApi } from '@/lib/api';
+import { messageApi, searchApi, userApi, federationApi, getCurrentInstance } from '@/lib/api';
 import {
   loadKeyPair,
   loadEncryptionKeys,
@@ -18,6 +18,7 @@ import {
 export default function DMPage({ onNavigate, userData, selectedUser }) {
   const { theme, toggleTheme } = useTheme();
   const isDarkMode = theme === 'dark';
+  const currentInstance = getCurrentInstance();
   const [threads, setThreads] = useState([]);
   const [selectedThread, setSelectedThread] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -400,10 +401,48 @@ export default function DMPage({ onNavigate, userData, selectedUser }) {
 
     setIsSearching(true);
     try {
-      const result = await searchApi.searchUsers(searchQuery);
-      // Filter out current user
-      const filtered = (result.users || []).filter(u => u.id !== userData?.id);
-      setSearchResults(filtered);
+      const current = getCurrentInstance();
+
+      // Search local users
+      const localResult = await searchApi.searchUsers(searchQuery);
+      const localUsers = (localResult.users || [])
+        .filter(u => u.id !== userData?.id)
+        .map(u => {
+          const instanceDomain = u.instance_domain || '';
+          const isGhostRemote = instanceDomain && instanceDomain !== 'localhost' && instanceDomain !== current.domain;
+          return {
+            ...u,
+            is_remote: isGhostRemote,
+            domain: instanceDomain || current.domain,
+          };
+        })
+        .filter(u => !u.is_remote);
+
+      // Also search federated users  
+      let federatedUsers = [];
+      try {
+        const fedResult = await federationApi.searchUsers(searchQuery);
+        federatedUsers = (fedResult.users || []).filter(u => u.is_remote && u.id !== userData?.id).map(u => ({
+          ...u,
+          is_remote: true,
+        }));
+      } catch (fedErr) {
+        console.log('Federation user search unavailable:', fedErr);
+      }
+
+      // Merge and deduplicate
+      const seen = new Set();
+      const merged = [];
+      for (const u of localUsers) {
+        const key = `${u.username}@${u.domain || u.instance_domain || 'local'}`;
+        if (!seen.has(key)) { seen.add(key); merged.push(u); }
+      }
+      for (const u of federatedUsers) {
+        const key = `${u.username}@${u.domain || 'remote'}`;
+        if (!seen.has(key)) { seen.add(key); merged.push(u); }
+      }
+
+      setSearchResults(merged);
     } catch (err) {
       console.error('Search failed:', err);
       setSearchResults([]);
@@ -512,9 +551,9 @@ export default function DMPage({ onNavigate, userData, selectedUser }) {
               )}
               {searchResults.length > 0 && (
                 <div style={{ marginTop: '8px' }}>
-                  {searchResults.map(user => (
+                  {searchResults.map((user, idx) => (
                     <div
-                      key={user.id}
+                      key={`${user.id || 'user'}-${user.domain || user.instance_domain || 'local'}-${idx}`}
                       onClick={() => startConversationWithUser(user)}
                       style={{
                         padding: '10px',
@@ -539,11 +578,21 @@ export default function DMPage({ onNavigate, userData, selectedUser }) {
                         {user.avatar_url || '👤'}
                       </div>
                       <div>
-                        <div style={{ color: '#fff', fontWeight: '600', fontSize: '14px' }}>
+                        <div style={{ color: '#fff', fontWeight: '600', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                           {user.display_name || user.username}
+                          {user.is_remote && (
+                            <span style={{
+                              fontSize: '10px',
+                              padding: '1px 6px',
+                              background: 'rgba(255,136,0,0.2)',
+                              color: '#ff8800',
+                              borderRadius: '4px',
+                              border: '1px solid rgba(255,136,0,0.3)'
+                            }}>🌐 {user.domain || 'Remote'}</span>
+                          )}
                         </div>
                         <div style={{ color: '#666', fontSize: '12px' }}>
-                          @{user.username}
+                          @{user.username}@{user.domain || user.instance_domain || 'local'}
                         </div>
                       </div>
                     </div>
@@ -580,7 +629,7 @@ export default function DMPage({ onNavigate, userData, selectedUser }) {
                     <div className="conversation-info">
                       <div className="conversation-name">
                         @{otherUser.username}
-                        {otherUser.instance_domain !== 'localhost' && (
+                        {otherUser.instance_domain && otherUser.instance_domain !== 'localhost' && otherUser.instance_domain !== currentInstance.domain && (
                           <span className="remote-indicator">🌐</span>
                         )}
                       </div>
@@ -642,7 +691,7 @@ export default function DMPage({ onNavigate, userData, selectedUser }) {
                   <div className="chat-title-section">
                     <h2 className="chat-title">@{getOtherUser(selectedThread).username}</h2>
                     <div className="chat-status">
-                      {getOtherUser(selectedThread).instance_domain !== 'localhost' && (
+                      {getOtherUser(selectedThread).instance_domain && getOtherUser(selectedThread).instance_domain !== 'localhost' && getOtherUser(selectedThread).instance_domain !== currentInstance.domain && (
                         <span className="status-text">🌐 Remote • </span>
                       )}
 

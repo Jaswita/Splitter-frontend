@@ -3,18 +3,22 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '@/components/ui/theme-provider';
 import '../styles/LoginPage.css';
-import { authApi, userApi, setApiBase } from '@/lib/api';
+import { authApi, userApi, setApiBase, getCurrentInstance } from '@/lib/api';
 import { getStoredKeyPair, signChallenge, importRecoveryFile } from '@/lib/crypto';
 
 export default function LoginPage({ onNavigate, updateUserData, setIsAuthenticated }) {
   const { theme, toggleTheme } = useTheme();
   const isDarkMode = theme === 'dark';
   const [loginMethod, setLoginMethod] = useState('password'); // 'password' or 'did'
-  const [formData, setFormData] = useState({
-    server: 'splitter-1',
-    username: '',
-    password: '',
-    did: ''
+  // Initialize server from localStorage so the dropdown matches what's actually stored
+  const [formData, setFormData] = useState(() => {
+    const currentInstance = typeof window !== 'undefined' ? getCurrentInstance() : { domain: 'splitter-1' };
+    return {
+      server: currentInstance.domain || 'splitter-1',
+      username: '',
+      password: '',
+      did: ''
+    };
   });
   const [keyPair, setKeyPair] = useState(null);
   const [challenge, setChallenge] = useState(null);
@@ -23,8 +27,11 @@ export default function LoginPage({ onNavigate, updateUserData, setIsAuthenticat
   const [success, setSuccess] = useState(false);
   const [step, setStep] = useState(1); // For DID login flow
 
-  // Check for stored keys on mount
+  // On mount: sync API base URL with the selected server and load stored keys
   useEffect(() => {
+    // Always call setApiBase on mount so localStorage matches dropdown
+    setApiBase(formData.server);
+    
     const loadStoredKeys = async () => {
       try {
         const stored = await getStoredKeyPair();

@@ -634,6 +634,51 @@ export const adminApi = {
   }
 };
 
+// Federation API - cross-instance communication
+export const federationApi = {
+  // Get federated timeline (local + remote posts)
+  async getTimeline(limit = 50) {
+    const response = await fetch(
+      `${apiBase()}/federation/timeline?limit=${limit}`
+    );
+    return handleResponse<{ posts: any[]; total: number }>(response);
+  },
+
+  // Search users across all instances (supports @user@domain format)
+  async searchUsers(query: string) {
+    const response = await fetch(
+      `${apiBase()}/federation/users?q=${encodeURIComponent(query)}`
+    );
+    return handleResponse<{ users: any[]; total: number }>(response);
+  },
+
+  // Get all users from all known federated instances
+  async getAllUsers() {
+    const response = await fetch(
+      `${apiBase()}/federation/all-users`
+    );
+    return handleResponse<{ users: any[]; total: number }>(response);
+  },
+
+  // Follow a remote user (requires auth)
+  async followRemoteUser(handle: string) {
+    const response = await fetch(`${apiBase()}/federation/follow`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ handle })
+    });
+    return handleResponse<{ status: string; target: string; message: string }>(response);
+  },
+
+  // Get public user list from a specific instance (for federation discovery)
+  async getPublicUsers(limit = 100) {
+    const response = await fetch(
+      `${apiBase()}/federation/public-users?limit=${limit}`
+    );
+    return handleResponse<{ users: any[]; total: number; domain: string }>(response);
+  }
+};
+
 // Export all APIs
 export const api = {
   auth: authApi,
@@ -644,7 +689,8 @@ export const api = {
   health: healthApi,
   search: searchApi,
   message: messageApi,
-  admin: adminApi
+  admin: adminApi,
+  federation: federationApi
 };
 
 export default api;
