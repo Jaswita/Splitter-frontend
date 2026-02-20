@@ -111,6 +111,13 @@
   align-items: center;
   justify-content: center;
   box-shadow: 0 0 20px color-mix(in srgb, var(--accent-1) 30%, transparent);
+  overflow: hidden;
+}
+
+.profile-avatar-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .profile-info {
@@ -355,6 +362,13 @@
 .follower-avatar {
   font-size: 32px;
   min-width: 40px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   text-align: center;
 }
 

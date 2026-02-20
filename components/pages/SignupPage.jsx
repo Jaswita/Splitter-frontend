@@ -61,6 +61,8 @@ export default function SignupPage({ onNavigate, updateUserData, setIsAuthentica
   const [passwordStrength, setPasswordStrength] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRegion, setSelectedRegion] = useState('All');
+  const [avatarFile, setAvatarFile] = useState(null);
+  const [avatarPreview, setAvatarPreview] = useState('');
 
   // Filter servers based on search and region
   const filteredServers = SERVERS.filter(server => {
@@ -192,6 +194,15 @@ export default function SignupPage({ onNavigate, updateUserData, setIsAuthentica
   };
 
   const submitSignup = async () => {
+    const normalizedUsername = (formData.username || '').trim();
+    const normalizedEmail = (formData.email || '').trim();
+    const normalizedDisplayName = (formData.displayName || '').trim();
+
+    if (!normalizedUsername || normalizedUsername.length < 3 || normalizedUsername.length > 50) {
+      setError('Username must be between 3 and 50 characters');
+      return;
+    }
+
     if (!formData.displayName) {
       setError('Please enter a display name');
       return;
@@ -203,11 +214,11 @@ export default function SignupPage({ onNavigate, updateUserData, setIsAuthentica
     try {
       // Register with backend - include DID if generated, otherwise backend auto-generates
       const registrationData = {
-        username: formData.username,
-        email: formData.email,
+        username: normalizedUsername,
+        email: normalizedEmail,
         password: formData.password,
-        display_name: formData.displayName,
-        bio: formData.bio,
+        display_name: normalizedDisplayName,
+        bio: (formData.bio || '').trim(),
         instance_domain: formData.server
       };
 
@@ -225,7 +236,7 @@ export default function SignupPage({ onNavigate, updateUserData, setIsAuthentica
         return;
       }
 
-      const result = await authApi.register(registrationData);
+      const result = await authApi.register(registrationData, avatarFile || undefined);
       console.log('Registration successful:', result);
 
       // Move to success step
@@ -849,6 +860,33 @@ This is optional - you can always add it later. If you generate it now, download
                 className="form-textarea"
                 rows="4"
               />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="avatar">Profile Photo (Optional):</label>
+              <input
+                id="avatar"
+                type="file"
+                accept="image/png, image/jpeg, image/gif"
+                className="form-input"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  if (file.size > 5 * 1024 * 1024) {
+                    setError('Avatar image must be 5MB or smaller');
+                    return;
+                  }
+                  setAvatarFile(file);
+                  setAvatarPreview(URL.createObjectURL(file));
+                }}
+              />
+              {avatarPreview && (
+                <img
+                  src={avatarPreview}
+                  alt="Avatar preview"
+                  style={{ width: '72px', height: '72px', borderRadius: '50%', objectFit: 'cover', marginTop: '8px' }}
+                />
+              )}
             </div>
 
             <div className="account-summary" style={{

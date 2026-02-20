@@ -80,6 +80,36 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
   const [editText, setEditText] = useState('');
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
 
+  const isImageAvatar = (avatar) => typeof avatar === 'string' && (avatar.startsWith('http://') || avatar.startsWith('https://') || avatar.startsWith('/'));
+
+  const getOriginForDomain = (domain) => {
+    if (domain === 'splitter-1') return 'http://localhost:8000';
+    if (domain === 'splitter-2') return 'http://localhost:8001';
+    const { url } = getCurrentInstance();
+    return new URL(url).origin;
+  };
+
+  const resolveAssetURL = (assetPath, domain) => {
+    if (!assetPath || !isImageAvatar(assetPath)) return '';
+    if (assetPath.startsWith('http://') || assetPath.startsWith('https://')) return assetPath;
+    try {
+      const origin = getOriginForDomain(domain);
+      return `${origin}${assetPath}`;
+    } catch {
+      return assetPath;
+    }
+  };
+
+  const dedupePosts = (list) => {
+    const seen = new Set();
+    return (list || []).filter((post, index) => {
+      const identity = `${post.id || 'id'}-${post.authorId || post.author_did || post.author || 'author'}-${post.createdAt || post.created_at || index}`;
+      if (seen.has(identity)) return false;
+      seen.add(identity);
+      return true;
+    });
+  };
+
   // Fetch posts on mount and when tab changes
   useEffect(() => {
     fetchPosts();
@@ -289,9 +319,19 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
 
       if (feedPosts && feedPosts.length > 0) {
         const instanceInfo = getCurrentInstance();
-        const transformedPosts = feedPosts.map(post => ({
+        const transformedPosts = feedPosts.map(post => {
+          const derivedDomain = (() => {
+            if (post.domain) return post.domain;
+            if (typeof post.author_did === 'string') {
+              if (post.author_did.includes('localhost:8001')) return 'splitter-2';
+              if (post.author_did.includes('localhost:8000')) return 'splitter-1';
+            }
+            return instanceInfo.domain;
+          })();
+
+          return {
           id: post.id,
-          author: post.username ? `${post.username}@${post.domain || instanceInfo.domain}` : `${post.author_did?.split(':').pop() || 'unknown'}@local`,
+          author: post.username ? `${post.username}@${derivedDomain}` : `${post.author_did?.split(':').pop() || 'unknown'}@local`,
           authorId: post.author_id || post.user_id,
           avatar: post.avatar_url || '👤',
           displayName: post.display_name || post.username || post.author_did?.split(':').pop() || 'Unknown',
@@ -305,14 +345,15 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
           likes: post.like_count || 0,
           local: post.is_remote !== undefined ? !post.is_remote : (post.is_local !== undefined ? post.is_local : true),
           isRemote: post.is_remote || false,
-          domain: post.domain || instanceInfo.domain,
+          domain: derivedDomain,
           visibility: post.visibility || 'public',
           liked: post.liked || false,
           reposted: post.reposted || false,
           bookmarked: post.bookmarked || false,
           imageUrl: post.media?.[0]?.media_url || null
-        }));
-        setPosts(transformedPosts);
+          };
+        });
+        setPosts(dedupePosts(transformedPosts));
       } else {
         setPosts(SAMPLE_POSTS);
       }
@@ -371,7 +412,7 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
         imageUrl: newPost.media?.[0]?.media_url || null
       };
 
-      setPosts(prev => [transformedPost, ...prev]);
+      setPosts(prev => dedupePosts([transformedPost, ...prev]));
 
       // reset composer
       setNewPostText('');
@@ -606,7 +647,11 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
                           justifyContent: 'center',
                           fontSize: '18px'
                         }}>
-                          {user.avatar_url || '👤'}
+                          {isImageAvatar(user.avatar_url) ? (
+                            <img src={resolveAssetURL(user.avatar_url, user.domain || user.instance_domain)} alt="User avatar" className="avatar-image-fill" />
+                          ) : (
+                            user.avatar_url || '👤'
+                          )}
                         </div>
                         <div style={{ flex: 1 }}>
                           <div style={{ color: '#fff', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -772,7 +817,13 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
           <div className="sidebar-section stats-widget user-info">
             <h3 className="sidebar-title">Your Profile</h3>
             <div className="sidebar-profile">
-              <div className="profile-avatar">{userData.avatar}</div>
+              <div className="profile-avatar">
+                {isImageAvatar(userData.avatar) ? (
+                  <img src={resolveAssetURL(userData.avatar, userData.server)} alt="Your avatar" className="avatar-image-fill" />
+                ) : (
+                  userData.avatar
+                )}
+              </div>
               <div className="profile-info">
                 <p className="profile-name">{userData.displayName}</p>
                 <p className="profile-handle">@{userData.username}@{userData.server}</p>
@@ -977,11 +1028,17 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
 
           {/* Posts */}
           <div className="feed-posts posts-list">
-            {posts.map((post, idx) => (
-              <article key={`${post.id}-${post.authorId || post.author_did || 'author'}-${post.createdAt || idx}`} className={`post ${post.local ? 'local' : 'remote'}`}>
+            {dedupePosts(posts).map((post, idx) => (
+              <article key={`${post.id}-${post.authorId || post.author_did || 'author'}-${post.createdAt || idx}-${idx}`} className={`post ${post.local ? 'local' : 'remote'}`}>
                 <div className="post-header">
                   <div className="post-author" style={{ cursor: 'pointer' }} onClick={() => onNavigate('profile')}>
-                    <span className="post-avatar">{post.avatar}</span>
+                    <span className="post-avatar">
+                      {isImageAvatar(post.avatar) ? (
+                        <img src={resolveAssetURL(post.avatar, post.domain)} alt="Post author avatar" className="avatar-image-fill" />
+                      ) : (
+                        post.avatar
+                      )}
+                    </span>
                     <div className="post-meta">
                       <div className="post-name-line">
                         <strong>{post.displayName}</strong>
@@ -1073,7 +1130,7 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
                     {post.imageUrl && (
                       <div style={{ marginTop: '10px' }}>
                         <img
-                          src={`http://localhost:8000${post.imageUrl}`}
+                          src={resolveAssetURL(post.imageUrl, post.domain)}
                           alt="Post attachment"
                           style={{
                             maxWidth: '100%',
@@ -1341,21 +1398,6 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
             </div>
           )}
 
-          <div className="trends-section">
-            <h3 className="trends-title">Coming Soon</h3>
-            <ul className="features-list">
-              <li>WebFinger Discovery - Sprint 2</li>
-              <li>ActivityPub Federation - Sprint 2</li>
-              <li>Instance Blocking - Sprint 2</li>
-              <li>Reply Threading - Sprint 2</li>
-              <li>E2E Encrypted DMs - Sprint 2</li>
-              <li>Media Upload UI - Sprint 2</li>
-              <li>Content Reporting - Sprint 2</li>
-              <li>Hashtag Support - Sprint 2</li>
-              <li>Trending Topics - Sprint 2</li>
-              <li>Mobile PWA - Sprint 2</li>
-            </ul>
-          </div>
         </aside>
       </div>
     </div>

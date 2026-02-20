@@ -63,12 +63,20 @@ async function handleResponse<T>(response: Response): Promise<T> {
       body: errorText
     });
 
+    let message = `HTTP ${response.status}`;
     try {
       const error = JSON.parse(errorText);
-      throw new Error(error.error || `HTTP ${response.status}`);
-    } catch (parseError) {
-      throw new Error(errorText || `HTTP ${response.status}`);
+      if (error?.error) {
+        message = error.error;
+      } else if (errorText) {
+        message = errorText;
+      }
+    } catch {
+      if (errorText) {
+        message = errorText;
+      }
     }
+    throw new Error(message);
   }
   return response.json();
 }
@@ -85,12 +93,34 @@ export const authApi = {
     did?: string;
     public_key?: string;
     encryption_public_key?: string;
-  }) {
-    const response = await fetch(`${apiBase()}/auth/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    });
+  }, avatarFile?: File) {
+    let response: Response;
+
+    if (avatarFile) {
+      const fd = new FormData();
+      fd.append('username', (data.username || '').trim());
+      fd.append('email', (data.email || '').trim());
+      fd.append('password', data.password || '');
+      if (data.display_name !== undefined) fd.append('display_name', String(data.display_name));
+      if (data.bio !== undefined) fd.append('bio', String(data.bio));
+      if (data.instance_domain !== undefined) fd.append('instance_domain', String(data.instance_domain));
+      if (data.did !== undefined) fd.append('did', String(data.did));
+      if (data.public_key !== undefined) fd.append('public_key', String(data.public_key));
+      if (data.encryption_public_key !== undefined) fd.append('encryption_public_key', String(data.encryption_public_key));
+      fd.append('avatar', avatarFile);
+
+      response = await fetch(`${apiBase()}/auth/register`, {
+        method: 'POST',
+        body: fd
+      });
+    } else {
+      response = await fetch(`${apiBase()}/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+    }
+
     const result = await handleResponse<{ user: any; token: string }>(response);
     if (result.token) {
       localStorage.setItem('jwt_token', result.token);
@@ -194,6 +224,24 @@ export const userApi = {
       method: 'PUT',
       headers: getAuthHeaders(),
       body: JSON.stringify(data)
+    });
+    return handleResponse<any>(response);
+  },
+
+  async uploadAvatar(file: File) {
+    const fd = new FormData();
+    fd.append('avatar', file);
+
+    const token = typeof window !== 'undefined' ? localStorage.getItem('jwt_token') : null;
+    const headers: HeadersInit = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(`${apiBase()}/users/me/avatar`, {
+      method: 'POST',
+      headers,
+      body: fd
     });
     return handleResponse<any>(response);
   },

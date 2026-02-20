@@ -42,6 +42,25 @@ export default function DMPage({ onNavigate, userData, selectedUser }) {
 
   const messagesEndRef = useRef(null);
 
+  const resolveRemoteRecipientKey = async (user) => {
+    try {
+      const domain = user?.domain || user?.instance_domain;
+      if (!user?.username || !domain) return '';
+
+      const query = `@${user.username}@${domain}`;
+      const result = await federationApi.searchUsers(query);
+      const candidates = result?.users || [];
+      const exact = candidates.find((u) =>
+        String(u.username || '').toLowerCase() === String(user.username || '').toLowerCase() &&
+        String(u.domain || u.instance_domain || '').toLowerCase() === String(domain || '').toLowerCase()
+      );
+
+      return exact?.encryption_public_key || '';
+    } catch {
+      return '';
+    }
+  };
+
   // Load my keys on mount
   useEffect(() => {
     async function loadKeys() {
@@ -102,7 +121,21 @@ export default function DMPage({ onNavigate, userData, selectedUser }) {
       if (!selectedThread || !myKeyPair) return;
 
       const otherUser = getOtherUser(selectedThread);
-      const otherUserPublicKey = otherUser.encryption_public_key;
+      let otherUserPublicKey = otherUser.encryption_public_key;
+
+      if (!otherUserPublicKey && otherUser?.is_remote) {
+        const resolvedKey = await resolveRemoteRecipientKey(otherUser);
+        if (resolvedKey) {
+          otherUserPublicKey = resolvedKey;
+          setSelectedThread((prev) => prev ? {
+            ...prev,
+            other_user: {
+              ...prev.other_user,
+              encryption_public_key: resolvedKey,
+            },
+          } : prev);
+        }
+      }
 
       if (!otherUserPublicKey) {
         setEncryptionStatus('recipient_missing_keys');
