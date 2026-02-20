@@ -1,101 +1,49 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTheme } from '@/components/ui/theme-provider';
 import '../styles/SignupPage.css';
-import { authApi } from '@/lib/api';
+import { authApi, setApiBase } from '@/lib/api';
 import { generateKeyPair, storeKeyPair, exportRecoveryFile } from '@/lib/crypto';
 import WalkthroughTooltip from '@/components/ui/WalkthroughTooltip';
 
-// Server data with locations
+// Real federated server instances
 const SERVERS = [
   {
     id: 1,
-    name: 'delhi-hub.in',
-    category: 'General Community',
-    users: 4350,
+    name: 'splitter-1',
+    category: 'Primary Instance',
+    users: 0,
     federation: 'Open',
     moderation: 'Moderate',
     reputation: 'trusted',
-    description: 'Community hub for Delhi region - culture, tech, and local news',
-    region: 'Delhi',
-    location: 'Delhi, India',
-    uptime: '99.9%',
-    ping: '12ms'
+    description: 'Primary Splitter instance — your main server for testing',
+    region: 'Local',
+    location: 'localhost:8000',
+    uptime: '100%',
+    ping: '1ms'
   },
   {
     id: 2,
-    name: 'bangalore-tech.in',
-    category: 'Technology',
-    users: 6200,
-    federation: 'Open',
-    moderation: 'Strict',
-    reputation: 'trusted',
-    description: 'Tech hub for Bangalore - startups, developers, and innovation',
-    region: 'Karnataka',
-    location: 'Bangalore, India',
-    uptime: '99.8%',
-    ping: '15ms'
-  },
-  {
-    id: 3,
-    name: 'mumbai-creative.in',
-    category: 'Creative & Arts',
-    users: 5100,
-    federation: 'Open',
-    moderation: 'Lenient',
-    reputation: 'trusted',
-    description: 'Creative hub for Mumbai - artists, filmmakers, and creators',
-    region: 'Maharashtra',
-    location: 'Mumbai, India',
-    uptime: '99.7%',
-    ping: '18ms'
-  },
-  {
-    id: 4,
-    name: 'kolkata-academic.in',
-    category: 'Academic & Research',
-    users: 2800,
-    federation: 'Open',
-    moderation: 'Strict',
-    reputation: 'trusted',
-    description: 'Academic community for Eastern India - research and education',
-    region: 'West Bengal',
-    location: 'Kolkata, India',
-    uptime: '99.5%',
-    ping: '22ms'
-  },
-  {
-    id: 5,
-    name: 'hyderabad-network.in',
-    category: 'Technology',
-    users: 3900,
+    name: 'splitter-2',
+    category: 'Federation Instance',
+    users: 0,
     federation: 'Open',
     moderation: 'Moderate',
     reputation: 'trusted',
-    description: 'Tech community for Hyderabad - AI, ML, and software development',
-    region: 'Telangana',
-    location: 'Hyderabad, India',
-    uptime: '99.6%',
-    ping: '16ms'
-  },
-  {
-    id: 6,
-    name: 'localhost',
-    category: 'Development',
-    users: 10,
-    federation: 'Open',
-    moderation: 'None',
-    reputation: 'dev',
-    description: 'Local development server for testing',
+    description: 'Second Splitter instance for federation testing — separate database',
     region: 'Local',
-    location: 'Local Machine',
+    location: 'localhost:8001',
     uptime: '100%',
     ping: '1ms'
   }
 ];
 
-const REGIONS = ['All', 'Delhi', 'Karnataka', 'Maharashtra', 'West Bengal', 'Telangana', 'Local'];
+const REGIONS = ['All', 'Local'];
+const SERVER_DISCOVERY_URLS = {
+  'splitter-1': 'http://localhost:8000/api/v1/federation/public-users?limit=1',
+  'splitter-2': 'http://localhost:8001/api/v1/federation/public-users?limit=1'
+};
 
 export default function SignupPage({ onNavigate, updateUserData, setIsAuthenticated }) {
   const { theme, toggleTheme } = useTheme();
@@ -117,9 +65,58 @@ export default function SignupPage({ onNavigate, updateUserData, setIsAuthentica
   const [passwordStrength, setPasswordStrength] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRegion, setSelectedRegion] = useState('All');
+  const [avatarFile, setAvatarFile] = useState(null);
+  const [avatarPreview, setAvatarPreview] = useState('');
+  const [servers, setServers] = useState(SERVERS);
+  const [isRefreshingServers, setIsRefreshingServers] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadServerCounts = async () => {
+      setIsRefreshingServers(true);
+      try {
+        const updated = await Promise.all(
+          SERVERS.map(async (server) => {
+            const endpoint = SERVER_DISCOVERY_URLS[server.name];
+            if (!endpoint) return server;
+
+            try {
+              const response = await fetch(endpoint);
+              if (!response.ok) {
+                return server;
+              }
+              const data = await response.json();
+              const userCount = Number(data?.total);
+              return {
+                ...server,
+                users: Number.isFinite(userCount) ? userCount : server.users
+              };
+            } catch {
+              return server;
+            }
+          })
+        );
+
+        if (isMounted) {
+          setServers(updated);
+        }
+      } finally {
+        if (isMounted) {
+          setIsRefreshingServers(false);
+        }
+      }
+    };
+
+    loadServerCounts();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Filter servers based on search and region
-  const filteredServers = SERVERS.filter(server => {
+  const filteredServers = servers.filter(server => {
     const matchesSearch = server.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       server.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
       server.description.toLowerCase().includes(searchTerm.toLowerCase());
@@ -144,7 +141,9 @@ export default function SignupPage({ onNavigate, updateUserData, setIsAuthentica
   };
 
   const handleServerChange = (e) => {
-    setFormData({ ...formData, server: e.target.value });
+    const serverName = e.target.value;
+    setFormData({ ...formData, server: serverName });
+    setApiBase(serverName); // Switch API to this instance
   };
 
   const handleGenerateDID = async () => {
@@ -164,11 +163,13 @@ export default function SignupPage({ onNavigate, updateUserData, setIsAuthentica
     }
   };
 
-  const handleDownloadRecovery = () => {
+  const handleDownloadRecovery = async () => {
     if (!keyPair || !formData.username) return;
 
     try {
-      exportRecoveryFile(keyPair, formData.username, formData.server);
+      const passphrase = window.prompt('Optional: Set a recovery file passphrase (min 8 chars). Leave blank for unencrypted export.');
+      const normalizedPassphrase = passphrase && passphrase.trim().length >= 8 ? passphrase.trim() : undefined;
+      await exportRecoveryFile(keyPair, formData.username, formData.server, normalizedPassphrase);
     } catch (err) {
       setError('Failed to create recovery file');
     }
@@ -246,6 +247,15 @@ export default function SignupPage({ onNavigate, updateUserData, setIsAuthentica
   };
 
   const submitSignup = async () => {
+    const normalizedUsername = (formData.username || '').trim();
+    const normalizedEmail = (formData.email || '').trim();
+    const normalizedDisplayName = (formData.displayName || '').trim();
+
+    if (!normalizedUsername || normalizedUsername.length < 3 || normalizedUsername.length > 50) {
+      setError('Username must be between 3 and 50 characters');
+      return;
+    }
+
     if (!formData.displayName) {
       setError('Please enter a display name');
       return;
@@ -257,11 +267,11 @@ export default function SignupPage({ onNavigate, updateUserData, setIsAuthentica
     try {
       // Register with backend - include DID if generated, otherwise backend auto-generates
       const registrationData = {
-        username: formData.username,
-        email: formData.email,
+        username: normalizedUsername,
+        email: normalizedEmail,
         password: formData.password,
-        display_name: formData.displayName,
-        bio: formData.bio,
+        display_name: normalizedDisplayName,
+        bio: (formData.bio || '').trim(),
         instance_domain: formData.server
       };
 
@@ -279,7 +289,7 @@ export default function SignupPage({ onNavigate, updateUserData, setIsAuthentica
         return;
       }
 
-      const result = await authApi.register(registrationData);
+      const result = await authApi.register(registrationData, avatarFile || undefined);
       console.log('Registration successful:', result);
 
       // Move to success step
@@ -381,6 +391,9 @@ Don't worry - you can always move later.`}
               <p style={{ color: isDarkMode ? '#888' : '#555', marginBottom: '16px', fontSize: '14px' }}>
                 Choose a federated server aligned with your interests and region
               </p>
+              <p style={{ color: isDarkMode ? '#777' : '#666', marginBottom: '14px', fontSize: '12px' }}>
+                {isRefreshingServers ? 'Syncing live instance user counts…' : 'User counts are live from each instance'}
+              </p>
 
               {/* Search & Filter */}
               <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}>
@@ -433,7 +446,7 @@ Don't worry - you can always move later.`}
                 {filteredServers.map(server => (
                   <div
                     key={server.id}
-                    onClick={() => setFormData({ ...formData, server: server.name })}
+                    onClick={() => { setFormData({ ...formData, server: server.name }); setApiBase(server.name); }}
                     style={{
                       background: formData.server === server.name
                         ? 'linear-gradient(135deg, rgba(0, 217, 255, 0.2), rgba(0, 255, 136, 0.1))'
@@ -903,6 +916,33 @@ This is optional - you can always add it later. If you generate it now, download
                 className="form-textarea"
                 rows="4"
               />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="avatar">Profile Photo (Optional):</label>
+              <input
+                id="avatar"
+                type="file"
+                accept="image/png, image/jpeg, image/gif"
+                className="form-input"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  if (file.size > 5 * 1024 * 1024) {
+                    setError('Avatar image must be 5MB or smaller');
+                    return;
+                  }
+                  setAvatarFile(file);
+                  setAvatarPreview(URL.createObjectURL(file));
+                }}
+              />
+              {avatarPreview && (
+                <img
+                  src={avatarPreview}
+                  alt="Avatar preview"
+                  style={{ width: '72px', height: '72px', borderRadius: '50%', objectFit: 'cover', marginTop: '8px' }}
+                />
+              )}
             </div>
 
             <div className="account-summary" style={{

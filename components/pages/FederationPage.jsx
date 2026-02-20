@@ -1,54 +1,59 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTheme } from '@/components/ui/theme-provider';
 import '../styles/FederationPage.css';
+import { adminApi } from '@/lib/api';
 
 export default function FederationPage({ onNavigate }) {
   const { theme, toggleTheme } = useTheme();
   const isDarkMode = theme === 'dark';
-  const [connectedServers] = useState([
-    {
-      id: 1,
-      domain: 'node1.social',
-      status: 'healthy',
-      reputation: 'Trusted',
-      lastSeen: '2 minutes ago',
-      activities: '142/min',
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [inspector, setInspector] = useState({
+    metrics: {
+      incoming_per_minute: 0,
+      outgoing_per_minute: 0,
+      signature_validation: '0%',
+      retry_queue: 0
     },
-    {
-      id: 2,
-      domain: 'federated.example.net',
-      status: 'healthy',
-      reputation: 'Trusted',
-      lastSeen: '1 minute ago',
-      activities: '89/min',
-    },
-    {
-      id: 3,
-      domain: 'crypto.social',
-      status: 'degraded',
-      reputation: 'Moderate',
-      lastSeen: '5 minutes ago',
-      activities: '23/min',
-    },
-    {
-      id: 4,
-      domain: 'privacy.net',
-      status: 'healthy',
-      reputation: 'Trusted',
-      lastSeen: '1 minute ago',
-      activities: '67/min',
-    },
-    {
-      id: 5,
-      domain: 'evil.net',
-      status: 'blocked',
-      reputation: 'Blocked',
-      lastSeen: '—',
-      activities: '0/min',
-    },
-  ]);
+    servers: [],
+    recent_incoming: [],
+    recent_outgoing: []
+  });
+
+  const loadInspector = async () => {
+    setIsLoading(true);
+    setError('');
+    try {
+      const data = await adminApi.getFederationInspector();
+      setInspector(data);
+    } catch (err) {
+      setError(err.message || 'Failed to load federation inspector data');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadInspector();
+    const timer = setInterval(loadInspector, 15000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const mergedTraffic = useMemo(() => {
+    const incoming = (inspector.recent_incoming || []).map((entry, idx) => ({
+      ...entry,
+      id: `in-${idx}`
+    }));
+    const outgoing = (inspector.recent_outgoing || []).map((entry, idx) => ({
+      ...entry,
+      id: `out-${idx}`
+    }));
+    return [...incoming, ...outgoing]
+      .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
+      .slice(0, 20);
+  }, [inspector]);
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -139,38 +144,29 @@ export default function FederationPage({ onNavigate }) {
       </div>
 
       <div className="federation-content">
-        {/* Demo/Stub Warning Banner */}
-        <div style={{
-          background: 'rgba(255, 193, 7, 0.1)',
-          border: '2px dashed var(--disabled-yellow)',
-          borderRadius: '12px',
-          padding: '20px',
-          marginBottom: '32px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '16px'
-        }}>
-          <div style={{ fontSize: '32px' }}>⚠️</div>
-          <div>
-            <h3 style={{ margin: '0 0 8px 0', color: 'var(--disabled-yellow)', fontSize: '16px', fontWeight: '700' }}>
-              Demo Visualization Only
-            </h3>
-            <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '14px', lineHeight: '1.6' }}>
-              This page displays <strong>stub/placeholder data</strong> for demonstration purposes. Federation functionality (ActivityPub protocol, inbox/outbox activities) is planned for <strong>Sprint 2+</strong>. All metrics, server connections, and activity data shown here are simulated.
-            </p>
+        {error && (
+          <div style={{
+            marginBottom: '18px',
+            padding: '12px',
+            borderRadius: '8px',
+            border: '1px solid rgba(255,68,68,0.45)',
+            background: 'rgba(255,68,68,0.1)',
+            color: '#ff8080'
+          }}>
+            {error}
           </div>
-        </div>
+        )}
 
         {/* Health Metrics */}
         <div className="health-section">
-          <h2 className="section-title">Federation Health <span style={{ fontSize: '12px', color: 'var(--disabled-yellow)', fontWeight: 'normal' }}>(Stub Data)</span></h2>
+          <h2 className="section-title">Federation Health</h2>
 
           <div className="metrics-grid">
             <div className="metric-card">
               <div className="metric-icon">📥</div>
               <div className="metric-info">
                 <div className="metric-label">Incoming Activities</div>
-                <div className="metric-value">14/min</div>
+                <div className="metric-value">{inspector.metrics?.incoming_per_minute || 0}/min</div>
               </div>
             </div>
 
@@ -178,7 +174,7 @@ export default function FederationPage({ onNavigate }) {
               <div className="metric-icon">📤</div>
               <div className="metric-info">
                 <div className="metric-label">Outgoing Activities</div>
-                <div className="metric-value">9/min</div>
+                <div className="metric-value">{inspector.metrics?.outgoing_per_minute || 0}/min</div>
               </div>
             </div>
 
@@ -186,7 +182,7 @@ export default function FederationPage({ onNavigate }) {
               <div className="metric-icon">✔</div>
               <div className="metric-info">
                 <div className="metric-label">Signature Validation</div>
-                <div className="metric-value">100%</div>
+                <div className="metric-value">{inspector.metrics?.signature_validation || '0%'}</div>
               </div>
             </div>
 
@@ -194,32 +190,44 @@ export default function FederationPage({ onNavigate }) {
               <div className="metric-icon">⏳</div>
               <div className="metric-info">
                 <div className="metric-label">Retry Queue</div>
-                <div className="metric-value">2 pending</div>
+                <div className="metric-value">{inspector.metrics?.retry_queue || 0} pending</div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Activity Chart (Visualization) */}
+        {/* Recent Federation Traffic */}
         <div className="activity-chart">
-          <h3>Activity Over Time <span style={{ fontSize: '11px', color: 'var(--disabled-yellow)', fontWeight: 'normal' }}>(Stub Visualization)</span></h3>
-          <div className="chart-placeholder">
-            <div className="chart-bar" style={{ height: '60%' }}></div>
-            <div className="chart-bar" style={{ height: '75%' }}></div>
-            <div className="chart-bar" style={{ height: '45%' }}></div>
-            <div className="chart-bar" style={{ height: '85%' }}></div>
-            <div className="chart-bar" style={{ height: '50%' }}></div>
-            <div className="chart-bar" style={{ height: '70%' }}></div>
-            <div className="chart-bar" style={{ height: '65%' }}></div>
-          </div>
-          <div className="chart-labels">
-            <span>Last 7 minutes</span>
+          <h3>Recent Federation Traffic</h3>
+          <div className="servers-table">
+            <div className="table-header">
+              <div className="col-status">Direction</div>
+              <div className="col-domain">Target / Actor</div>
+              <div className="col-reputation">Type</div>
+              <div className="col-status">Status</div>
+              <div className="col-lastseen">Time</div>
+            </div>
+            {mergedTraffic.length > 0 ? mergedTraffic.map((entry) => (
+              <div key={entry.id} className="table-row">
+                <div className="col-status">{entry.direction === 'incoming' ? '📥 In' : '📤 Out'}</div>
+                <div className="col-domain">
+                  <span className="domain-name">{entry.actor_uri || entry.target_inbox || '—'}</span>
+                </div>
+                <div className="col-reputation">{entry.type || '—'}</div>
+                <div className="col-status">{entry.status || 'received'}</div>
+                <div className="col-lastseen">{entry.time ? new Date(entry.time).toLocaleString() : '—'}</div>
+              </div>
+            )) : (
+              <div className="table-row">
+                <div className="col-domain" style={{ padding: '12px', color: '#888' }}>No recent federation traffic</div>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Connected Servers Table */}
         <div className="servers-section">
-          <h2 className="section-title">Connected Servers <span style={{ fontSize: '12px', color: 'var(--disabled-yellow)', fontWeight: 'normal' }}>(Demo Data)</span></h2>
+          <h2 className="section-title">Connected Servers</h2>
 
           <div className="servers-table">
             <div className="table-header">
@@ -230,8 +238,8 @@ export default function FederationPage({ onNavigate }) {
               <div className="col-activities">Activities</div>
             </div>
 
-            {connectedServers.map((server) => (
-              <div key={server.id} className="table-row">
+            {(inspector.servers || []).map((server, idx) => (
+              <div key={`${server.domain || 'domain'}-${idx}`} className="table-row">
                 <div className="col-domain">
                   <span className="domain-name">{server.domain}</span>
                 </div>
@@ -250,10 +258,15 @@ export default function FederationPage({ onNavigate }) {
                     {server.reputation}
                   </span>
                 </div>
-                <div className="col-lastseen">{server.lastSeen}</div>
-                <div className="col-activities">{server.activities}</div>
+                <div className="col-lastseen">{server.last_seen && server.last_seen !== '—' ? new Date(server.last_seen).toLocaleString() : '—'}</div>
+                <div className="col-activities">{server.activities_m || 0}/min</div>
               </div>
             ))}
+            {(inspector.servers || []).length === 0 && !isLoading && (
+              <div className="table-row">
+                <div className="col-domain" style={{ padding: '12px', color: '#888' }}>No federated domains observed yet.</div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -280,17 +293,8 @@ export default function FederationPage({ onNavigate }) {
         <div className="advanced-section">
           <h3>Advanced Options</h3>
           <div className="advanced-buttons">
-            <button className="advanced-btn" disabled title="Sprint 2 feature">
-              🔄 Resync Federation
-              <span className="disabled-label">Sprint 2</span>
-            </button>
-            <button className="advanced-btn" disabled title="Sprint 2 feature">
-              📋 Export Activity Log
-              <span className="disabled-label">Sprint 2</span>
-            </button>
-            <button className="advanced-btn" disabled title="Sprint 2 feature">
-              📊 Detailed Analytics
-              <span className="disabled-label">Sprint 2</span>
+            <button className="advanced-btn" onClick={loadInspector} disabled={isLoading}>
+              {isLoading ? '⏳ Refreshing…' : '🔄 Refresh Inspector'}
             </button>
           </div>
         </div>

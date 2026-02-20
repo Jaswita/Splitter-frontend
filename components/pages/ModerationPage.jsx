@@ -12,6 +12,7 @@ export default function ModerationPage({ onNavigate, userData }) {
   const [queue, setQueue] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(null);
+  const [error, setError] = useState('');
 
   // Check permissions
   if (userData?.role !== 'admin' && userData?.role !== 'moderator') {
@@ -50,12 +51,13 @@ export default function ModerationPage({ onNavigate, userData }) {
 
   const fetchModerationQueue = async () => {
     setIsLoading(true);
+    setError('');
     try {
       const result = await adminApi.getModerationQueue();
       setQueue(result.items || []);
     } catch (err) {
       console.error('Failed to fetch moderation queue:', err);
-      // Fall back to empty queue on error
+      setError(err.message || 'Failed to load moderation queue');
       setQueue([]);
     } finally {
       setIsLoading(false);
@@ -186,28 +188,6 @@ export default function ModerationPage({ onNavigate, userData }) {
       </div>
 
       <div className="moderation-content">
-        {/* Stub Warning Banner */}
-        <div style={{
-          background: 'rgba(255, 193, 7, 0.1)',
-          border: '2px dashed var(--disabled-yellow)',
-          borderRadius: '12px',
-          padding: '20px',
-          marginBottom: '32px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '16px'
-        }}>
-          <div style={{ fontSize: '32px' }}>⚠️</div>
-          <div>
-            <h3 style={{ margin: '0 0 8px 0', color: 'var(--disabled-yellow)', fontSize: '16px', fontWeight: '700' }}>
-              Content Moderation Queue - Stub Feature
-            </h3>
-            <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '14px', lineHeight: '1.6' }}>
-              This page is a <strong>placeholder/stub</strong> for Sprint 2+. The content moderation queue system (user reports, flagged content, spam detection) is not yet implemented. All data and actions shown below are for demonstration purposes only.
-            </p>
-          </div>
-        </div>
-
         {/* Header Section */}
         <div className="moderation-header">
           <div className="header-info">
@@ -229,6 +209,19 @@ export default function ModerationPage({ onNavigate, userData }) {
             🔄 Refresh
           </button>
         </div>
+
+        {error && (
+          <div style={{
+            marginBottom: '16px',
+            padding: '12px',
+            borderRadius: '8px',
+            border: '1px solid rgba(255,68,68,0.45)',
+            background: 'rgba(255,68,68,0.1)',
+            color: '#ff8080'
+          }}>
+            {error}
+          </div>
+        )}
 
         {/* Filter Buttons */}
         <div className="filter-chips">
@@ -271,6 +264,7 @@ export default function ModerationPage({ onNavigate, userData }) {
               <div className="col-user">User</div>
               <div className="col-server">Server</div>
               <div className="col-reason">Reason</div>
+              <div className="col-reason">Reported At</div>
               <div className="col-action">Action</div>
             </div>
 
@@ -291,6 +285,9 @@ export default function ModerationPage({ onNavigate, userData }) {
                     <span className={`reason-tag ${(item.reason || 'reported').toLowerCase().replace(' ', '-')}`}>
                       {item.reason || 'Reported by User'}
                     </span>
+                  </div>
+                  <div className="col-reason" style={{ color: '#888', fontSize: '12px' }}>
+                    {item.created_at ? new Date(item.created_at).toLocaleString() : '—'}
                   </div>
                   <div className="col-action">
                     <div className="action-buttons">

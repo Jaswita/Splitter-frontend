@@ -3,9 +3,9 @@
 import { useState, useEffect } from 'react';
 import { useTheme } from '@/components/ui/theme-provider';
 import '../styles/ProfilePage.css';
-import { followApi, userApi, postApi } from '@/lib/api';
+import { followApi, userApi, postApi, getCurrentInstance, resolveMediaUrl } from '@/lib/api';
 
-export default function ProfilePage({ onNavigate, userData, viewingUserId = null }) {
+export default function ProfilePage({ onNavigate, userData, updateUserData, viewingUserId = null }) {
   const { theme, toggleTheme } = useTheme();
   const isDarkMode = theme === 'dark';
   const [activeTab, setActiveTab] = useState('posts');
@@ -13,8 +13,56 @@ export default function ProfilePage({ onNavigate, userData, viewingUserId = null
   const [isFollowLoading, setIsFollowLoading] = useState(false);
   const [profileData, setProfileData] = useState(null);
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [editDisplayName, setEditDisplayName] = useState('');
+  const [editBio, setEditBio] = useState('');
+  const [selectedAvatarFile, setSelectedAvatarFile] = useState(null);
+  const [avatarPreview, setAvatarPreview] = useState('');
   const [stats, setStats] = useState({ followers: 0, following: 0, posts: 0 });
   const [userPosts, setUserPosts] = useState([]);
+  const [followersList, setFollowersList] = useState([]);
+  const [followingList, setFollowingList] = useState([]);
+  const [isLoadingFollows, setIsLoadingFollows] = useState(false);
+
+  const isImageURL = (value) => typeof value === 'string' && (value.startsWith('http://') || value.startsWith('https://') || value.startsWith('/'));
+
+  const resolveURL = (value) => {
+    if (!value || !isImageURL(value)) return '';
+    const resolved = resolveMediaUrl(value);
+    if (resolved) return resolved;
+    try {
+      const { url } = getCurrentInstance();
+      const origin = new URL(url).origin;
+      return `${origin}${value}`;
+    } catch {
+      return value;
+    }
+  };
+
+  const refreshFollowData = async (targetId) => {
+    if (!targetId) return;
+
+    setIsLoadingFollows(true);
+    try {
+      const [followers, following] = await Promise.all([
+        followApi.getFollowers(targetId, 200, 0),
+        followApi.getFollowing(targetId, 200, 0),
+      ]);
+
+      setFollowersList(followers || []);
+      setFollowingList(following || []);
+
+      setStats(prev => ({
+        ...prev,
+        followers: (followers || []).length,
+        following: (following || []).length,
+      }));
+    } catch (err) {
+      console.error('Failed to fetch follower/following lists:', err);
+    } finally {
+      setIsLoadingFollows(false);
+    }
+  };
 
   // Fetch user profile and stats
   useEffect(() => {
@@ -56,17 +104,7 @@ export default function ProfilePage({ onNavigate, userData, viewingUserId = null
           setProfileData(userData);
         }
 
-        // Fetch follow stats
-        try {
-          const followStats = await followApi.getFollowStats(targetId);
-          setStats(prev => ({
-            ...prev,
-            followers: followStats.followers || 0,
-            following: followStats.following || 0,
-          }));
-        } catch (err) {
-          console.error('Failed to fetch follow stats:', err);
-        }
+        await refreshFollowData(targetId);
 
         // Fetch post count (get user's posts)
         try {
@@ -103,17 +141,74 @@ export default function ProfilePage({ onNavigate, userData, viewingUserId = null
       if (isFollowing) {
         await followApi.unfollowUser(viewingUserId);
         setIsFollowing(false);
-        setStats(prev => ({ ...prev, followers: Math.max(0, prev.followers - 1) }));
       } else {
         await followApi.followUser(viewingUserId);
         setIsFollowing(true);
-        setStats(prev => ({ ...prev, followers: prev.followers + 1 }));
       }
+
+      await refreshFollowData(viewingUserId);
     } catch (err) {
       console.error('Follow operation failed:', err);
       alert(`Failed to ${isFollowing ? 'unfollow' : 'follow'} user: ${err.message}`);
     } finally {
       setIsFollowLoading(false);
+    }
+  };
+
+  const handleUnfollowFromFollowing = async (targetUserId) => {
+    if (!targetUserId || viewingUserId) return;
+
+    try {
+      await followApi.unfollowUser(targetUserId);
+      const selfId = userData?.id;
+      await refreshFollowData(selfId);
+    } catch (err) {
+      console.error('Failed to unfollow user:', err);
+      alert(`Failed to unfollow user: ${err.message}`);
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    if (viewingUserId) return;
+
+    setIsSavingProfile(true);
+    try {
+      const updated = await userApi.updateProfile({
+        display_name: editDisplayName,
+        bio: editBio,
+      });
+
+      let finalUser = updated;
+      if (selectedAvatarFile) {
+        finalUser = await userApi.uploadAvatar(selectedAvatarFile);
+      }
+
+      const nextProfile = {
+        username: finalUser.username,
+        server: finalUser.instance_domain || 'localhost:8000',
+        displayName: finalUser.display_name || finalUser.username,
+        avatar: finalUser.avatar_url || '👤',
+        bio: finalUser.bio || '',
+        email: finalUser.email,
+        did: finalUser.did,
+      };
+
+      setProfileData(nextProfile);
+      setSelectedAvatarFile(null);
+      setAvatarPreview('');
+
+      if (updateUserData) {
+        updateUserData({
+          displayName: nextProfile.displayName,
+          bio: nextProfile.bio,
+          avatar: nextProfile.avatar,
+        });
+      }
+    } catch (err) {
+      console.error('Failed to update profile:', err);
+      alert(`Failed to update profile: ${err.message}`);
+    } finally {
+      setIsSavingProfile(false);
     }
   };
 
@@ -124,8 +219,6 @@ export default function ProfilePage({ onNavigate, userData, viewingUserId = null
     server: displayData?.server || 'localhost:8000',
     displayName: displayData?.displayName || displayData?.display_name || displayData?.username || 'Unknown User',
     did: displayData?.did || 'did:key:...',
-    reputation: 'Trusted',
-    reputationColor: '#00d9ff',
     avatar: displayData?.avatar || '👤',
     bio: displayData?.bio || 'No bio yet',
     email: displayData?.email,
@@ -134,6 +227,11 @@ export default function ProfilePage({ onNavigate, userData, viewingUserId = null
     following: stats.following,
     posts: stats.posts,
   };
+
+  useEffect(() => {
+    setEditDisplayName(profile.displayName || '');
+    setEditBio(profile.bio || '');
+  }, [profile.displayName, profile.bio]);
 
   // Format post timestamp
   const formatTimestamp = (timestamp) => {
@@ -196,23 +294,19 @@ export default function ProfilePage({ onNavigate, userData, viewingUserId = null
         <div className="profile-header-card">
           <div className="profile-header-top">
             <div className="profile-avatar-section">
-              <div className="profile-avatar">{profile.avatar}</div>
+              <div className="profile-avatar">
+                {avatarPreview ? (
+                  <img src={avatarPreview} alt="Avatar preview" className="profile-avatar-image" />
+                ) : isImageURL(profile.avatar) ? (
+                  <img src={resolveURL(profile.avatar)} alt="Profile avatar" className="profile-avatar-image" />
+                ) : (
+                  profile.avatar
+                )}
+              </div>
               <div className="profile-info">
                 <div className="profile-username">
                   @{profile.username}@{profile.server}
                   {!profile.isLocal && <span className="federated-badge">🌐</span>}
-                </div>
-                <div className="profile-reputation">
-                  <span
-                    className="reputation-dot"
-                    style={{ backgroundColor: profile.reputationColor }}
-                  ></span>
-                  <span className="reputation-text">
-                    {profile.reputation}
-                    <span className="disabled-tooltip">
-                      ⓘ Reputation scoring enabled in Sprint 2
-                    </span>
-                  </span>
                 </div>
               </div>
             </div>
@@ -243,6 +337,59 @@ export default function ProfilePage({ onNavigate, userData, viewingUserId = null
 
           {/* Bio */}
           <div className="profile-bio">{profile.bio}</div>
+
+          {!viewingUserId && (
+            <div style={{ marginBottom: '16px', display: 'grid', gap: '10px' }}>
+              <label style={{ fontSize: '13px', color: '#888' }}>Display Name</label>
+              <input
+                type="text"
+                value={editDisplayName}
+                onChange={(e) => setEditDisplayName(e.target.value)}
+                style={{ padding: '10px', borderRadius: '8px', border: '1px solid #333', background: '#1a1a2e', color: '#fff' }}
+              />
+
+              <label style={{ fontSize: '13px', color: '#888' }}>Bio</label>
+              <textarea
+                value={editBio}
+                onChange={(e) => setEditBio(e.target.value)}
+                rows={3}
+                style={{ padding: '10px', borderRadius: '8px', border: '1px solid #333', background: '#1a1a2e', color: '#fff', resize: 'vertical' }}
+              />
+
+              <label style={{ fontSize: '13px', color: '#888' }}>Profile Photo</label>
+              <input
+                type="file"
+                accept="image/png, image/jpeg, image/gif"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  if (file.size > 5 * 1024 * 1024) {
+                    alert('File size exceeds 5MB limit.');
+                    return;
+                  }
+                  setSelectedAvatarFile(file);
+                  setAvatarPreview(URL.createObjectURL(file));
+                }}
+              />
+
+              <button
+                onClick={handleSaveProfile}
+                disabled={isSavingProfile || !editDisplayName}
+                style={{
+                  width: 'fit-content',
+                  padding: '10px 16px',
+                  borderRadius: '8px',
+                  border: '1px solid #00d9ff',
+                  background: 'rgba(0,217,255,0.1)',
+                  color: '#00d9ff',
+                  cursor: isSavingProfile ? 'not-allowed' : 'pointer',
+                  opacity: isSavingProfile ? 0.6 : 1,
+                }}
+              >
+                {isSavingProfile ? 'Saving...' : 'Save Profile'}
+              </button>
+            </div>
+          )}
 
           {/* Stats Bar */}
           <div className="profile-stats">
@@ -322,44 +469,57 @@ export default function ProfilePage({ onNavigate, userData, viewingUserId = null
         {/* Followers Tab */}
         {activeTab === 'followers' && (
           <div className="profile-list">
-            <div className="list-item">
-              <div className="follower-avatar">👨</div>
-              <div className="follower-info">
-                <div className="follower-name">@bob@federated.social</div>
-                <div className="follower-status">Trusted</div>
-              </div>
-              <button className="unfollow-button">Unfollow</button>
-            </div>
-            <div className="list-item">
-              <div className="follower-avatar">👩</div>
-              <div className="follower-info">
-                <div className="follower-name">@carol@social.example.net</div>
-                <div className="follower-status">Local</div>
-              </div>
-              <button className="unfollow-button">Unfollow</button>
-            </div>
+            {isLoadingFollows ? (
+              <div style={{ textAlign: 'center', color: '#666', padding: '24px' }}>Loading followers...</div>
+            ) : followersList.length === 0 ? (
+              <div style={{ textAlign: 'center', color: '#666', padding: '24px' }}>No followers yet</div>
+            ) : (
+              followersList.map((user) => (
+                <div className="list-item" key={`follower-${user.id}`}>
+                  <div className="follower-avatar">
+                    {isImageURL(user.avatar_url) ? (
+                      <img src={resolveURL(user.avatar_url)} alt="Follower avatar" className="profile-avatar-image" />
+                    ) : (
+                      user.avatar_url || '👤'
+                    )}
+                  </div>
+                  <div className="follower-info">
+                    <div className="follower-name">@{user.username}@{user.instance_domain || 'local'}</div>
+                    <div className="follower-status">{user.display_name || user.username}</div>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         )}
 
         {/* Following Tab */}
         {activeTab === 'following' && (
           <div className="profile-list">
-            <div className="list-item">
-              <div className="follower-avatar">🧑</div>
-              <div className="follower-info">
-                <div className="follower-name">@dave@crypto.social</div>
-                <div className="follower-status">Remote</div>
-              </div>
-              <button className="unfollow-button">Following</button>
-            </div>
-            <div className="list-item">
-              <div className="follower-avatar">👩‍🔬</div>
-              <div className="follower-info">
-                <div className="follower-name">@eve@research.net</div>
-                <div className="follower-status">Trusted</div>
-              </div>
-              <button className="unfollow-button">Following</button>
-            </div>
+            {isLoadingFollows ? (
+              <div style={{ textAlign: 'center', color: '#666', padding: '24px' }}>Loading following...</div>
+            ) : followingList.length === 0 ? (
+              <div style={{ textAlign: 'center', color: '#666', padding: '24px' }}>Not following anyone yet</div>
+            ) : (
+              followingList.map((user) => (
+                <div className="list-item" key={`following-${user.id}`}>
+                  <div className="follower-avatar">
+                    {isImageURL(user.avatar_url) ? (
+                      <img src={resolveURL(user.avatar_url)} alt="Following avatar" className="profile-avatar-image" />
+                    ) : (
+                      user.avatar_url || '👤'
+                    )}
+                  </div>
+                  <div className="follower-info">
+                    <div className="follower-name">@{user.username}@{user.instance_domain || 'local'}</div>
+                    <div className="follower-status">{user.display_name || user.username}</div>
+                  </div>
+                  {!viewingUserId && (
+                    <button className="unfollow-button" onClick={() => handleUnfollowFromFollowing(user.id)}>Unfollow</button>
+                  )}
+                </div>
+              ))
+            )}
           </div>
         )}
       </div>
