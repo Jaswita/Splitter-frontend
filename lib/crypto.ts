@@ -14,6 +14,18 @@ export interface KeyPair {
   encryptionPrivateKeyBase64?: string;
 }
 
+interface RecoveryFileV2 {
+  version: 2;
+  encrypted: true;
+  algorithm: 'AES-GCM';
+  kdf: 'PBKDF2-SHA256';
+  iterations: number;
+  salt: string;
+  iv: string;
+  ciphertext: string;
+  checksum: string;
+}
+
 // Generate a new Ed25519 (actually P-256 ECDSA) keypair for DID
 export async function generateKeyPair(): Promise<KeyPair> {
   // Generate Signing Keypair (ECDSA P-256)
@@ -194,6 +206,47 @@ export async function decryptMessage(ciphertext: string, iv: string, sharedKey: 
   }
 }
 
+async function deriveRecoveryKey(passphrase: string, saltBuffer: ArrayBuffer): Promise<CryptoKey> {
+  const encoder = new TextEncoder();
+  const passphraseKey = await window.crypto.subtle.importKey(
+    'raw',
+    encoder.encode(passphrase),
+    { name: 'PBKDF2' },
+    false,
+    ['deriveKey']
+  );
+
+  return window.crypto.subtle.deriveKey(
+    {
+      name: 'PBKDF2',
+      salt: new Uint8Array(saltBuffer),
+      iterations: 210000,
+      hash: 'SHA-256',
+    },
+    passphraseKey,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['encrypt', 'decrypt']
+  );
+}
+
+function assertRecoveryDataIntegrity(recoveryData: any): void {
+  const required = ['did', 'public_key', 'private_key', 'username', 'server', 'timestamp'];
+  for (const key of required) {
+    if (!recoveryData[key] || typeof recoveryData[key] !== 'string') {
+      throw new Error(`Recovery file missing required field: ${key}`);
+    }
+  }
+
+  if (!recoveryData.did.startsWith('did:')) {
+    throw new Error('Invalid DID in recovery file');
+  }
+
+  if (!recoveryData.public_key || !recoveryData.private_key) {
+    throw new Error('Recovery file keys are incomplete');
+  }
+}
+
 
 // Helper: Convert ArrayBuffer to Base64
 function bufferToBase64(buffer: ArrayBuffer): string {
@@ -284,7 +337,7 @@ export async function loadKeyPair(): Promise<KeyPair | null> {
 }
 
 // Export recovery file
-export function exportRecoveryFile(keyPair: KeyPair, username: string, server: string): void {
+export async function exportRecoveryFile(keyPair: KeyPair, username: string, server: string, passphrase?: string): Promise<void> {
   const recoveryData = {
     did: keyPair.did,
     public_key: keyPair.publicKeyBase64,
@@ -297,7 +350,36 @@ export function exportRecoveryFile(keyPair: KeyPair, username: string, server: s
     warning: 'KEEP THIS FILE SECURE! Anyone with this file can access your account.',
   };
 
-  const dataStr = JSON.stringify(recoveryData, null, 2);
+  assertRecoveryDataIntegrity(recoveryData);
+
+  let dataStr = JSON.stringify(recoveryData, null, 2);
+
+  if (passphrase && passphrase.trim().length >= 8) {
+    const salt = window.crypto.getRandomValues(new Uint8Array(16));
+    const iv = window.crypto.getRandomValues(new Uint8Array(12));
+    const key = await deriveRecoveryKey(passphrase.trim(), salt.buffer);
+    const plaintext = new TextEncoder().encode(dataStr);
+    const ciphertext = await window.crypto.subtle.encrypt(
+      { name: 'AES-GCM', iv },
+      key,
+      plaintext
+    );
+
+    const checksum = await hashString(dataStr);
+    const encryptedFile: RecoveryFileV2 = {
+      version: 2,
+      encrypted: true,
+      algorithm: 'AES-GCM',
+      kdf: 'PBKDF2-SHA256',
+      iterations: 210000,
+      salt: bufferToBase64(salt.buffer),
+      iv: bufferToBase64(iv.buffer),
+      ciphertext: bufferToBase64(ciphertext),
+      checksum,
+    };
+    dataStr = JSON.stringify(encryptedFile, null, 2);
+  }
+
   const dataBlob = new Blob([dataStr], { type: 'application/json' });
   const url = URL.createObjectURL(dataBlob);
 
@@ -324,14 +406,42 @@ export function clearStoredKeys(): void {
 export const getStoredKeyPair = loadKeyPair;
 
 // Import recovery file
-export async function importRecoveryFile(file: File): Promise<KeyPair> {
+export async function importRecoveryFile(file: File, passphrase?: string): Promise<KeyPair> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
 
     reader.onload = async (e) => {
       try {
         const content = e.target?.result as string;
-        const recoveryData = JSON.parse(content);
+        let recoveryData: any = JSON.parse(content);
+
+        if (recoveryData?.encrypted === true && recoveryData?.version === 2) {
+          const envelopeChecksum = recoveryData.checksum;
+          if (!passphrase || passphrase.trim().length < 8) {
+            throw new Error('Recovery file is encrypted. A valid passphrase is required.');
+          }
+
+          const saltBuffer = base64ToBuffer(recoveryData.salt || '');
+          const ivBuffer = base64ToBuffer(recoveryData.iv || '');
+          const cipherBuffer = base64ToBuffer(recoveryData.ciphertext || '');
+          const key = await deriveRecoveryKey(passphrase.trim(), saltBuffer);
+          const decrypted = await window.crypto.subtle.decrypt(
+            { name: 'AES-GCM', iv: new Uint8Array(ivBuffer) },
+            key,
+            cipherBuffer
+          );
+          const decryptedJson = new TextDecoder().decode(decrypted);
+          recoveryData = JSON.parse(decryptedJson);
+
+          if (envelopeChecksum) {
+            const checksum = await hashString(JSON.stringify(recoveryData, null, 2));
+            if (checksum !== envelopeChecksum) {
+              throw new Error('Recovery file integrity check failed');
+            }
+          }
+        }
+
+        assertRecoveryDataIntegrity(recoveryData);
 
         if (!recoveryData.private_key || !recoveryData.public_key || !recoveryData.did) {
           throw new Error('Invalid recovery file format');

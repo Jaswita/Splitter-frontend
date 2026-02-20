@@ -163,11 +163,13 @@ export default function SignupPage({ onNavigate, updateUserData, setIsAuthentica
     }
   };
 
-  const handleDownloadRecovery = () => {
+  const handleDownloadRecovery = async () => {
     if (!keyPair || !formData.username) return;
 
     try {
-      exportRecoveryFile(keyPair, formData.username, formData.server);
+      const passphrase = window.prompt('Optional: Set a recovery file passphrase (min 8 chars). Leave blank for unencrypted export.');
+      const normalizedPassphrase = passphrase && passphrase.trim().length >= 8 ? passphrase.trim() : undefined;
+      await exportRecoveryFile(keyPair, formData.username, formData.server, normalizedPassphrase);
     } catch (err) {
       setError('Failed to create recovery file');
     }

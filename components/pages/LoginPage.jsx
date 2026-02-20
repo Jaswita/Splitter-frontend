@@ -200,7 +200,8 @@ export default function LoginPage({ onNavigate, updateUserData, setIsAuthenticat
     if (!file) return;
 
     try {
-      const imported = await importRecoveryFile(file);
+      const passphrase = window.prompt('If this recovery file is encrypted, enter passphrase (leave blank for unencrypted files):');
+      const imported = await importRecoveryFile(file, passphrase || undefined);
       setKeyPair(imported);
       setFormData(prev => ({ ...prev, did: imported.did }));
       setError(null);
