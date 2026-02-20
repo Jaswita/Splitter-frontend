@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTheme } from '@/components/ui/theme-provider';
 import '../styles/SignupPage.css';
 import { authApi, setApiBase } from '@/lib/api';
@@ -40,6 +40,10 @@ const SERVERS = [
 ];
 
 const REGIONS = ['All', 'Local'];
+const SERVER_DISCOVERY_URLS = {
+  'splitter-1': 'http://localhost:8000/api/v1/federation/public-users?limit=1',
+  'splitter-2': 'http://localhost:8001/api/v1/federation/public-users?limit=1'
+};
 
 export default function SignupPage({ onNavigate, updateUserData, setIsAuthenticated }) {
   const { theme, toggleTheme } = useTheme();
@@ -63,9 +67,56 @@ export default function SignupPage({ onNavigate, updateUserData, setIsAuthentica
   const [selectedRegion, setSelectedRegion] = useState('All');
   const [avatarFile, setAvatarFile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState('');
+  const [servers, setServers] = useState(SERVERS);
+  const [isRefreshingServers, setIsRefreshingServers] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadServerCounts = async () => {
+      setIsRefreshingServers(true);
+      try {
+        const updated = await Promise.all(
+          SERVERS.map(async (server) => {
+            const endpoint = SERVER_DISCOVERY_URLS[server.name];
+            if (!endpoint) return server;
+
+            try {
+              const response = await fetch(endpoint);
+              if (!response.ok) {
+                return server;
+              }
+              const data = await response.json();
+              const userCount = Number(data?.total);
+              return {
+                ...server,
+                users: Number.isFinite(userCount) ? userCount : server.users
+              };
+            } catch {
+              return server;
+            }
+          })
+        );
+
+        if (isMounted) {
+          setServers(updated);
+        }
+      } finally {
+        if (isMounted) {
+          setIsRefreshingServers(false);
+        }
+      }
+    };
+
+    loadServerCounts();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Filter servers based on search and region
-  const filteredServers = SERVERS.filter(server => {
+  const filteredServers = servers.filter(server => {
     const matchesSearch = server.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       server.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
       server.description.toLowerCase().includes(searchTerm.toLowerCase());
@@ -337,6 +388,9 @@ Don't worry - you can always move later.`}
               <h2 className="step-title">Select Your Server 🧭</h2>
               <p style={{ color: isDarkMode ? '#888' : '#555', marginBottom: '16px', fontSize: '14px' }}>
                 Choose a federated server aligned with your interests and region
+              </p>
+              <p style={{ color: isDarkMode ? '#777' : '#666', marginBottom: '14px', fontSize: '12px' }}>
+                {isRefreshingServers ? 'Syncing live instance user counts…' : 'User counts are live from each instance'}
               </p>
 
               {/* Search & Filter */}

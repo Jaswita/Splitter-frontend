@@ -110,6 +110,32 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
     });
   };
 
+  const parseRemoteIdentity = (post, fallbackDomain) => {
+    let username = post.username || '';
+    let domain = post.domain || fallbackDomain;
+
+    const authorDid = typeof post.author_did === 'string' ? post.author_did : '';
+    if (authorDid.startsWith('http://') || authorDid.startsWith('https://')) {
+      try {
+        const parsed = new URL(authorDid);
+        const pathParts = parsed.pathname.split('/').filter(Boolean);
+        if (!username && pathParts.length > 0) {
+          username = pathParts[pathParts.length - 1] || '';
+        }
+        if (parsed.host.includes('localhost:8001')) {
+          domain = 'splitter-2';
+        } else if (parsed.host.includes('localhost:8000')) {
+          domain = 'splitter-1';
+        } else if (!post.domain) {
+          domain = parsed.hostname || domain;
+        }
+      } catch {
+      }
+    }
+
+    return { username, domain };
+  };
+
   // Fetch posts on mount and when tab changes
   useEffect(() => {
     fetchPosts();
@@ -297,6 +323,33 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
         if (token) {
           try {
             feedPosts = await postApi.getFeed(20, 0);
+
+            // Ensure followed remote posts are included from federated timeline
+            try {
+              const { followApi } = await import('@/lib/api');
+              const following = await followApi.getFollowing(userData?.id, 200, 0);
+              const followedHandles = new Set(
+                (following || [])
+                  .filter(u => {
+                    const domain = u.instance_domain || u.domain || '';
+                    return domain && domain !== 'localhost' && domain !== getCurrentInstance().domain;
+                  })
+                  .map(u => `${u.username}@${u.instance_domain || u.domain}`.toLowerCase())
+              );
+
+              if (followedHandles.size > 0) {
+                const fedResult = await federationApi.getTimeline(100);
+                const followedRemotePosts = (fedResult.posts || []).filter(p => {
+                  if (!p.is_remote) return false;
+                  const domain = p.domain || (typeof p.author_did === 'string' && p.author_did.includes('localhost:8001') ? 'splitter-2' : p.author_did?.includes('localhost:8000') ? 'splitter-1' : '');
+                  const handle = `${p.username || ''}@${domain}`.toLowerCase();
+                  return followedHandles.has(handle);
+                });
+                feedPosts = [...(feedPosts || []), ...followedRemotePosts];
+              }
+            } catch (mergeErr) {
+              console.log('Followed remote merge skipped:', mergeErr);
+            }
           } catch (authErr) {
             feedPosts = await postApi.getPublicFeed(20, 0, false);
           }
@@ -320,22 +373,17 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
       if (feedPosts && feedPosts.length > 0) {
         const instanceInfo = getCurrentInstance();
         const transformedPosts = feedPosts.map(post => {
-          const derivedDomain = (() => {
-            if (post.domain) return post.domain;
-            if (typeof post.author_did === 'string') {
-              if (post.author_did.includes('localhost:8001')) return 'splitter-2';
-              if (post.author_did.includes('localhost:8000')) return 'splitter-1';
-            }
-            return instanceInfo.domain;
-          })();
+          const identity = parseRemoteIdentity(post, instanceInfo.domain);
+          const derivedDomain = identity.domain || instanceInfo.domain;
+          const derivedUsername = identity.username || post.author_did?.split(':').pop() || 'unknown';
 
           return {
           id: post.id,
-          author: post.username ? `${post.username}@${derivedDomain}` : `${post.author_did?.split(':').pop() || 'unknown'}@local`,
+          author: `${derivedUsername}@${derivedDomain}`,
           authorId: post.author_id || post.user_id,
           avatar: post.avatar_url || '👤',
-          displayName: post.display_name || post.username || post.author_did?.split(':').pop() || 'Unknown',
-          handle: `@${post.username || post.author_did?.split(':').pop() || 'unknown'}`,
+          displayName: post.display_name || derivedUsername || 'Unknown',
+          handle: `@${derivedUsername}`,
           timestamp: formatTimestamp(post.created_at),
           createdAt: post.created_at,
           updatedAt: post.updated_at,
@@ -355,11 +403,19 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
         });
         setPosts(dedupePosts(transformedPosts));
       } else {
-        setPosts(SAMPLE_POSTS);
+    if (activeTab === 'federated') {
+      setPosts([]);
+    } else {
+      setPosts(SAMPLE_POSTS);
+    }
       }
     } catch (err) {
       console.error('Failed to fetch posts:', err);
-      setPosts(SAMPLE_POSTS);
+    if (activeTab === 'federated') {
+    setPosts([]);
+    } else {
+    setPosts(SAMPLE_POSTS);
+    }
     } finally {
       setIsLoading(false);
     }

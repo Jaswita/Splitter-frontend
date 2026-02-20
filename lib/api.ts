@@ -611,15 +611,10 @@ export const adminApi = {
 
   // Content moderation queue
   async getModerationQueue() {
-    try {
-      const response = await fetch(`${apiBase()}/admin/moderation-queue`, {
-        headers: getAuthHeaders()
-      });
-      return handleResponse<{ items: any[] }>(response);
-    } catch (err) {
-      console.log('Moderation queue endpoint not yet implemented, returning empty');
-      return { items: [] };
-    }
+    const response = await fetch(`${apiBase()}/admin/moderation-queue`, {
+      headers: getAuthHeaders()
+    });
+    return handleResponse<{ items: any[]; total: number }>(response);
   },
 
   async approveContent(reportId: string) {
@@ -679,6 +674,23 @@ export const adminApi = {
       body: JSON.stringify({ reason })
     });
     return handleResponse<{ message: string }>(response);
+  },
+
+  async getFederationInspector() {
+    const response = await fetch(`${apiBase()}/admin/federation-inspector`, {
+      headers: getAuthHeaders()
+    });
+    return handleResponse<{
+      metrics: {
+        incoming_per_minute: number;
+        outgoing_per_minute: number;
+        signature_validation: string;
+        retry_queue: number;
+      };
+      servers: any[];
+      recent_incoming: any[];
+      recent_outgoing: any[];
+    }>(response);
   }
 };
 
