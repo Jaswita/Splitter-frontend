@@ -8,18 +8,40 @@ const INSTANCE_URLS: Record<string, string> = {
   'localhost': 'http://localhost:8000/api/v1',  // backward compatibility
 };
 
+function normalizeApiBaseUrl(url: string): string {
+  const raw = (url || '').trim();
+  if (!raw) return 'http://localhost:8000/api/v1';
+
+  let normalized = raw.replace(/\/+$/, '');
+
+  if (/\/api\/v1$/i.test(normalized)) {
+    return normalized;
+  }
+  if (/\/api$/i.test(normalized)) {
+    return `${normalized}/v1`;
+  }
+
+  return `${normalized}/api/v1`;
+}
+
 // Get the current API base URL from localStorage or default
 function getApiBase(): string {
   if (typeof window !== 'undefined') {
     const stored = localStorage.getItem('splitter_api_base');
-    if (stored) return stored;
+    if (stored) {
+      const normalizedStored = normalizeApiBaseUrl(stored);
+      if (normalizedStored !== stored) {
+        localStorage.setItem('splitter_api_base', normalizedStored);
+      }
+      return normalizedStored;
+    }
   }
-  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+  return normalizeApiBaseUrl(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1');
 }
 
 // Set the API base URL (called when user selects a server)
 export function setApiBase(serverDomain: string): void {
-  const url = INSTANCE_URLS[serverDomain] || `http://localhost:8000/api/v1`;
+  const url = normalizeApiBaseUrl(INSTANCE_URLS[serverDomain] || `http://localhost:8000/api/v1`);
   if (typeof window !== 'undefined') {
     localStorage.setItem('splitter_api_base', url);
     localStorage.setItem('splitter_instance', serverDomain);
@@ -31,10 +53,40 @@ export function setApiBase(serverDomain: string): void {
 export function getCurrentInstance(): { domain: string; url: string } {
   if (typeof window !== 'undefined') {
     const domain = localStorage.getItem('splitter_instance') || 'splitter-1';
-    const url = localStorage.getItem('splitter_api_base') || INSTANCE_URLS['splitter-1'];
+    const url = normalizeApiBaseUrl(localStorage.getItem('splitter_api_base') || INSTANCE_URLS['splitter-1']);
     return { domain, url };
   }
-  return { domain: 'splitter-1', url: INSTANCE_URLS['splitter-1'] };
+  return { domain: 'splitter-1', url: normalizeApiBaseUrl(INSTANCE_URLS['splitter-1']) };
+}
+
+export function resolveMediaUrl(rawUrl?: string): string {
+  if (!rawUrl || typeof rawUrl !== 'string') return '';
+  const value = rawUrl.trim();
+  if (!value) return '';
+
+  if (value.startsWith('http://') || value.startsWith('https://')) return value;
+
+  const toApiOrigin = (base: string) => {
+    try {
+      return new URL(base).origin;
+    } catch {
+      return '';
+    }
+  };
+
+  if (value.startsWith('/')) {
+    const current = getCurrentInstance();
+    const origin = toApiOrigin(current.url);
+    return origin ? `${origin}${value}` : value;
+  }
+
+  if (value.startsWith('api/')) {
+    const current = getCurrentInstance();
+    const origin = toApiOrigin(current.url);
+    return origin ? `${origin}/${value}` : value;
+  }
+
+  return value;
 }
 
 // Alias used throughout this file in fetch calls
@@ -647,6 +699,30 @@ export const adminApi = {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify({ domain })
+    });
+    return handleResponse<{ message: string }>(response);
+  },
+
+  async blockDomainWithReason(domain: string, reason: string) {
+    const response = await fetch(`${apiBase()}/admin/domains/block`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ domain, reason })
+    });
+    return handleResponse<{ message: string }>(response);
+  },
+
+  async getBlockedDomains() {
+    const response = await fetch(`${apiBase()}/admin/domains/blocked`, {
+      headers: getAuthHeaders()
+    });
+    return handleResponse<{ domains: any[] }>(response);
+  },
+
+  async unblockDomain(domain: string) {
+    const response = await fetch(`${apiBase()}/admin/domains/${encodeURIComponent(domain)}/block`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
     });
     return handleResponse<{ message: string }>(response);
   },

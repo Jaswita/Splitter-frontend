@@ -29,27 +29,21 @@ export default function AdminPage({ onNavigate, userData, handleLogout }) {
   const [showBanModal, setShowBanModal] = useState(false);
   
   // Federation state
-  const [blockedDomains, setBlockedDomains] = useState([
-    { domain: 'spam.example.com', reason: 'Spam source', blocked_at: '2026-02-01T10:30:00Z', blocked_by: 'admin' },
-    { domain: 'evil.net', reason: 'Malicious activity', blocked_at: '2026-01-28T15:20:00Z', blocked_by: 'admin' }
-  ]);
-  const [federationActivities, setFederationActivities] = useState([
-    { id: 1, type: 'inbox', domain: 'node1.social', activity_type: 'Create', status: 'success', timestamp: '2026-02-09T12:30:00Z' },
-    { id: 2, type: 'outbox', domain: 'federated.net', activity_type: 'Follow', status: 'success', timestamp: '2026-02-09T12:25:00Z' },
-    { id: 3, type: 'inbox', domain: 'privacy.social', activity_type: 'Like', status: 'success', timestamp: '2026-02-09T12:20:00Z' },
-    { id: 4, type: 'outbox', domain: 'crypto.social', activity_type: 'Create', status: 'pending', timestamp: '2026-02-09T12:15:00Z' }
-  ]);
+  const [blockedDomains, setBlockedDomains] = useState([]);
+  const [federationActivities, setFederationActivities] = useState([]);
   const [trafficMetrics, setTrafficMetrics] = useState({
-    totalInbound: 1247,
-    totalOutbound: 892,
-    successRate: 98.5,
-    avgLatency: 245,
-    activeDomains: 15
+    totalInbound: 0,
+    totalOutbound: 0,
+    successRate: 0,
+    avgLatency: 0,
+    activeDomains: 0
   });
+  const [federationLoading, setFederationLoading] = useState(false);
   const [newBlockDomain, setNewBlockDomain] = useState('');
   const [newBlockReason, setNewBlockReason] = useState('');
   const [banTarget, setBanTarget] = useState(null);
   const [banReason, setBanReason] = useState('');
+  const USERS_PAGE_SIZE = 10;
 
   /* ================= ACCESS CHECK ================= */
   if (userData?.role !== 'admin') {
@@ -114,8 +108,57 @@ export default function AdminPage({ onNavigate, userData, handleLogout }) {
         fetchAdminActions();
       }
       if (activeTab === 'users') fetchAllUsers();
+      if (activeTab === 'federation') fetchFederationData();
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchFederationData = async () => {
+    setFederationLoading(true);
+    try {
+      const [inspector, blocked] = await Promise.all([
+        adminApi.getFederationInspector(),
+        adminApi.getBlockedDomains(),
+      ]);
+
+      const incoming = inspector?.recent_incoming || [];
+      const outgoing = inspector?.recent_outgoing || [];
+      const merged = [
+        ...incoming.map((item, index) => ({
+          id: `in-${index}`,
+          type: 'inbox',
+          domain: item.actor_uri || 'unknown',
+          activity_type: item.type || 'unknown',
+          status: item.status || 'received',
+          timestamp: item.time,
+        })),
+        ...outgoing.map((item, index) => ({
+          id: `out-${index}`,
+          type: 'outbox',
+          domain: item.target_inbox || 'unknown',
+          activity_type: item.type || 'unknown',
+          status: item.status || 'pending',
+          timestamp: item.time,
+        })),
+      ].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+      const sigRateRaw = String(inspector?.metrics?.signature_validation || '0').replace('%', '');
+      const sigRate = Number.parseFloat(sigRateRaw) || 0;
+
+      setFederationActivities(merged.slice(0, 50));
+      setBlockedDomains(blocked?.domains || []);
+      setTrafficMetrics({
+        totalInbound: incoming.length,
+        totalOutbound: outgoing.length,
+        successRate: sigRate,
+        avgLatency: 0,
+        activeDomains: (inspector?.servers || []).length,
+      });
+    } catch (error) {
+      console.error('Failed to fetch federation data:', error);
+    } finally {
+      setFederationLoading(false);
     }
   };
 
@@ -140,7 +183,7 @@ export default function AdminPage({ onNavigate, userData, handleLogout }) {
   };
 
   const fetchAllUsers = async () => {
-    const result = await adminApi.getAllUsers(50, page * 50);
+    const result = await adminApi.getAllUsers(USERS_PAGE_SIZE, page * USERS_PAGE_SIZE);
     setUsers(result.users || []);
     setTotalUsers(result.total || 0);
   };
@@ -934,25 +977,9 @@ export default function AdminPage({ onNavigate, userData, handleLogout }) {
                         {users.map(user => (
                           <tr key={user.id} style={{ borderTop: '1px solid #333' }}>
                             <td style={{ padding: '16px' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                <div style={{
-                                  width: '40px',
-                                  height: '40px',
-                                  borderRadius: '50%',
-                                  background: user.is_suspended 
-                                    ? 'rgba(255,68,68,0.2)' 
-                                    : 'linear-gradient(135deg, #00d9ff, #00ff88)',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  filter: user.is_suspended ? 'grayscale(50%)' : 'none'
-                                }}>
-                                  {user.avatar_url || '👤'}
-                                </div>
-                                <div>
-                                  <div style={{ fontWeight: '600' }}>{user.display_name || user.username}</div>
-                                  <div style={{ color: '#666', fontSize: '12px' }}>@{user.username}</div>
-                                </div>
+                              <div>
+                                <div style={{ fontWeight: '600' }}>{user.display_name || user.username}</div>
+                                <div style={{ color: '#666', fontSize: '12px' }}>@{user.username}</div>
                               </div>
                             </td>
                             <td style={{ padding: '16px' }}>
@@ -1044,7 +1071,7 @@ export default function AdminPage({ onNavigate, userData, handleLogout }) {
                   </div>
 
                   {/* Pagination */}
-                  {totalUsers > 50 && (
+                  {totalUsers > USERS_PAGE_SIZE && (
                     <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '24px' }}>
                       <button
                         onClick={() => setPage(p => Math.max(0, p - 1))}
@@ -1062,19 +1089,19 @@ export default function AdminPage({ onNavigate, userData, handleLogout }) {
                         ← Previous
                       </button>
                       <span style={{ padding: '8px 16px', color: '#666' }}>
-                        Page {page + 1} of {Math.ceil(totalUsers / 50)}
+                        Page {page + 1} of {Math.ceil(totalUsers / USERS_PAGE_SIZE)}
                       </span>
                       <button
                         onClick={() => setPage(p => p + 1)}
-                        disabled={(page + 1) * 50 >= totalUsers}
+                        disabled={(page + 1) * USERS_PAGE_SIZE >= totalUsers}
                         style={{
                           padding: '8px 16px',
                           background: 'rgba(0,217,255,0.1)',
                           border: '1px solid #00d9ff',
                           color: '#00d9ff',
                           borderRadius: '6px',
-                          cursor: (page + 1) * 50 >= totalUsers ? 'not-allowed' : 'pointer',
-                          opacity: (page + 1) * 50 >= totalUsers ? 0.5 : 1
+                          cursor: (page + 1) * USERS_PAGE_SIZE >= totalUsers ? 'not-allowed' : 'pointer',
+                          opacity: (page + 1) * USERS_PAGE_SIZE >= totalUsers ? 0.5 : 1
                         }}
                       >
                         Next →
@@ -1148,16 +1175,16 @@ export default function AdminPage({ onNavigate, userData, handleLogout }) {
                     }}
                   />
                   <button
-                    onClick={() => {
-                      if (newBlockDomain && newBlockReason) {
-                        setBlockedDomains([...blockedDomains, {
-                          domain: newBlockDomain,
-                          reason: newBlockReason,
-                          blocked_at: new Date().toISOString(),
-                          blocked_by: userData.username
-                        }]);
+                    onClick={async () => {
+                      if (!newBlockDomain || !newBlockReason) return;
+                      try {
+                        await adminApi.blockDomainWithReason(newBlockDomain, newBlockReason);
                         setNewBlockDomain('');
                         setNewBlockReason('');
+                        await fetchFederationData();
+                      } catch (error) {
+                        console.error('Failed to block domain:', error);
+                        alert(`Failed to block domain: ${error.message}`);
                       }
                     }}
                     disabled={!newBlockDomain || !newBlockReason}
@@ -1192,7 +1219,7 @@ export default function AdminPage({ onNavigate, userData, handleLogout }) {
                     </thead>
                     <tbody>
                       {blockedDomains.map((domain, idx) => (
-                        <tr key={idx} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                        <tr key={`${domain.domain}-${idx}`} style={{ borderBottom: '1px solid var(--border-color)' }}>
                           <td style={{ padding: '12px', fontSize: '14px' }}>
                             <code style={{ background: 'rgba(255,68,68,0.1)', padding: '4px 8px', borderRadius: '4px', color: '#ff4444' }}>
                               {domain.domain}
@@ -1203,7 +1230,15 @@ export default function AdminPage({ onNavigate, userData, handleLogout }) {
                           <td style={{ padding: '12px', fontSize: '13px' }}>@{domain.blocked_by}</td>
                           <td style={{ padding: '12px', textAlign: 'center' }}>
                             <button
-                              onClick={() => setBlockedDomains(blockedDomains.filter((_, i) => i !== idx))}
+                              onClick={async () => {
+                                try {
+                                  await adminApi.unblockDomain(domain.domain);
+                                  await fetchFederationData();
+                                } catch (error) {
+                                  console.error('Failed to unblock domain:', error);
+                                  alert(`Failed to unblock domain: ${error.message}`);
+                                }
+                              }}
                               style={{
                                 padding: '6px 12px',
                                 background: 'rgba(0,255,136,0.1)',
@@ -1239,7 +1274,15 @@ export default function AdminPage({ onNavigate, userData, handleLogout }) {
                       </tr>
                     </thead>
                     <tbody>
-                      {federationActivities.map((activity) => (
+                      {federationLoading ? (
+                        <tr>
+                          <td colSpan={5} style={{ padding: '16px', color: '#888' }}>Loading federation activity...</td>
+                        </tr>
+                      ) : federationActivities.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} style={{ padding: '16px', color: '#888' }}>No federation activity recorded yet.</td>
+                        </tr>
+                      ) : federationActivities.map((activity) => (
                         <tr key={activity.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
                           <td style={{ padding: '12px' }}>
                             <span style={{

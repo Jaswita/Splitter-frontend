@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useTheme } from '@/components/ui/theme-provider';
 import '../styles/ProfilePage.css';
-import { followApi, userApi, postApi, getCurrentInstance } from '@/lib/api';
+import { followApi, userApi, postApi, getCurrentInstance, resolveMediaUrl } from '@/lib/api';
 
 export default function ProfilePage({ onNavigate, userData, updateUserData, viewingUserId = null }) {
   const { theme, toggleTheme } = useTheme();
@@ -28,7 +28,8 @@ export default function ProfilePage({ onNavigate, userData, updateUserData, view
 
   const resolveURL = (value) => {
     if (!value || !isImageURL(value)) return '';
-    if (value.startsWith('http://') || value.startsWith('https://')) return value;
+    const resolved = resolveMediaUrl(value);
+    if (resolved) return resolved;
     try {
       const { url } = getCurrentInstance();
       const origin = new URL(url).origin;

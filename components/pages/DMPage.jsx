@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useTheme } from '@/components/ui/theme-provider';
 import '../styles/DMPage.css';
-import { messageApi, searchApi, userApi, federationApi, getCurrentInstance } from '@/lib/api';
+import { messageApi, searchApi, userApi, federationApi, getCurrentInstance, resolveMediaUrl } from '@/lib/api';
 import {
   loadKeyPair,
   loadEncryptionKeys,
@@ -41,6 +41,22 @@ export default function DMPage({ onNavigate, userData, selectedUser }) {
   const [editMessage, setEditMessage] = useState('');
 
   const messagesEndRef = useRef(null);
+
+  const renderAvatar = (user, className = '', size = 40) => {
+    const raw = user?.avatar_url || user?.avatar || '';
+    const resolved = resolveMediaUrl(raw);
+    if (resolved) {
+      return (
+        <img
+          src={resolved}
+          alt={`${user?.username || 'user'} avatar`}
+          className={className}
+          style={className ? undefined : { width: size, height: size, borderRadius: '50%', objectFit: 'cover' }}
+        />
+      );
+    }
+    return '👤';
+  };
 
   const resolveRemoteRecipientKey = async (user) => {
     try {
@@ -570,10 +586,10 @@ export default function DMPage({ onNavigate, userData, selectedUser }) {
                 style={{
                   width: '100%',
                   padding: '10px',
-                  background: 'rgba(255,255,255,0.05)',
-                  border: '1px solid #333',
+                  background: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
+                  border: `1px solid ${isDarkMode ? '#333' : '#cbd5e1'}`,
                   borderRadius: '6px',
-                  color: '#fff',
+                  color: isDarkMode ? '#fff' : '#111827',
                   fontSize: '14px'
                 }}
               />
@@ -590,7 +606,8 @@ export default function DMPage({ onNavigate, userData, selectedUser }) {
                       onClick={() => startConversationWithUser(user)}
                       style={{
                         padding: '10px',
-                        background: 'rgba(0,217,255,0.1)',
+                        background: isDarkMode ? 'rgba(0,217,255,0.1)' : 'rgba(2,132,199,0.08)',
+                        border: `1px solid ${isDarkMode ? 'transparent' : 'rgba(148,163,184,0.45)'}`,
                         borderRadius: '6px',
                         marginBottom: '4px',
                         cursor: 'pointer',
@@ -608,10 +625,10 @@ export default function DMPage({ onNavigate, userData, selectedUser }) {
                         alignItems: 'center',
                         justifyContent: 'center'
                       }}>
-                        {user.avatar_url || '👤'}
+                        {renderAvatar(user, '', 32)}
                       </div>
                       <div>
-                        <div style={{ color: '#fff', fontWeight: '600', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <div style={{ color: isDarkMode ? '#fff' : '#111827', fontWeight: '600', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                           {user.display_name || user.username}
                           {user.is_remote && (
                             <span style={{
@@ -624,7 +641,7 @@ export default function DMPage({ onNavigate, userData, selectedUser }) {
                             }}>🌐 {user.domain || 'Remote'}</span>
                           )}
                         </div>
-                        <div style={{ color: '#666', fontSize: '12px' }}>
+                        <div style={{ color: isDarkMode ? '#666' : '#475569', fontSize: '12px' }}>
                           @{user.username}@{user.domain || user.instance_domain || 'local'}
                         </div>
                       </div>
@@ -657,7 +674,7 @@ export default function DMPage({ onNavigate, userData, selectedUser }) {
                     onClick={() => selectThread(thread)}
                   >
                     <div className="conversation-avatar">
-                      {otherUser.avatar_url || '👤'}
+                      {renderAvatar(otherUser, 'conversation-avatar-image')}
                     </div>
                     <div className="conversation-info">
                       <div className="conversation-name">
@@ -719,7 +736,7 @@ export default function DMPage({ onNavigate, userData, selectedUser }) {
               <div className="chat-header">
                 <div className="chat-header-info">
                   <div className="chat-avatar">
-                    {getOtherUser(selectedThread).avatar_url || '👤'}
+                    {renderAvatar(getOtherUser(selectedThread), 'chat-avatar-image')}
                   </div>
                   <div className="chat-title-section">
                     <h2 className="chat-title">@{getOtherUser(selectedThread).username}</h2>

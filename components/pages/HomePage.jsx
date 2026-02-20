@@ -401,20 +401,29 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
           imageUrl: post.media?.[0]?.media_url || null
           };
         });
-        setPosts(dedupePosts(transformedPosts));
+        const currentDomain = instanceInfo.domain;
+        let filteredPosts = dedupePosts(transformedPosts);
+
+        if (activeTab === 'local') {
+          filteredPosts = filteredPosts.filter((item) => !item.isRemote && (item.domain === currentDomain || item.domain === 'localhost'));
+        } else if (activeTab === 'federated') {
+          filteredPosts = filteredPosts.filter((item) => item.isRemote);
+        }
+
+        setPosts(filteredPosts);
       } else {
-    if (activeTab === 'federated') {
-      setPosts([]);
-    } else {
+    if (activeTab === 'home') {
       setPosts(SAMPLE_POSTS);
+    } else {
+      setPosts([]);
     }
       }
     } catch (err) {
       console.error('Failed to fetch posts:', err);
-    if (activeTab === 'federated') {
-    setPosts([]);
-    } else {
+    if (activeTab === 'home') {
     setPosts(SAMPLE_POSTS);
+    } else {
+    setPosts([]);
     }
     } finally {
       setIsLoading(false);

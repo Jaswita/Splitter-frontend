@@ -149,7 +149,14 @@
   gap: 1.5rem;
   position: sticky;
   top: 70px;
-  height: fit-content;
+  max-height: calc(100vh - 86px);
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.home-sidebar::-webkit-scrollbar {
+  width: 0;
+  height: 0;
 }
 
 .sidebar-section {
@@ -319,7 +326,7 @@
 
 .composer-textarea {
   width: 100%;
-  min-height: 100px;
+  min-height: 140px;
   padding: 1rem;
   background: var(--secondary-navy);
   border: 1px solid var(--border-color);
@@ -580,7 +587,14 @@
   gap: 1.5rem;
   position: sticky;
   top: 70px;
-  height: fit-content;
+  max-height: calc(100vh - 86px);
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.home-trends::-webkit-scrollbar {
+  width: 0;
+  height: 0;
 }
 
 .trends-section {
@@ -672,6 +686,8 @@
   .home-sidebar,
   .home-trends {
     position: static;
+    max-height: none;
+    overflow: visible;
   }
 
   .nav-center {
