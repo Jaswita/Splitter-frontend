@@ -762,10 +762,50 @@ export const adminApi = {
         outgoing_per_minute: number;
         signature_validation: string;
         retry_queue: number;
+        failing_domains: number;
       };
-      servers: any[];
+      servers: Array<{
+        domain: string;
+        status: string;
+        reputation: string;
+        reputation_score?: number;
+        last_seen: string;
+        incoming_m: number;
+        outgoing_m: number;
+        activities_m: number;
+        retry_queue?: number;
+        failed_h?: number;
+        circuit_open?: boolean;
+      }>;
+      failing_domains: Array<{
+        domain: string;
+        queued: number;
+        max_retry_count: number;
+        next_retry_at: string;
+        last_error: string;
+        circuit_open_until: string;
+      }>;
       recent_incoming: any[];
       recent_outgoing: any[];
+    }>(response);
+  },
+
+  async getFederationNetwork(selfDomain?: string) {
+    const suffix = selfDomain ? `?self=${encodeURIComponent(selfDomain)}` : '';
+    const response = await fetch(`${apiBase()}/admin/federation/network${suffix}`, {
+      headers: getAuthHeaders()
+    });
+    return handleResponse<{
+      nodes: Array<{ id: string; type: string }>;
+      edges: Array<{
+        source: string;
+        target: string;
+        weight: number;
+        success_count: number;
+        failure_count: number;
+        last_status: string;
+        last_seen: string;
+      }>;
     }>(response);
   }
 };

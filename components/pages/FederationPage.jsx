@@ -15,12 +15,15 @@ export default function FederationPage({ onNavigate }) {
       incoming_per_minute: 0,
       outgoing_per_minute: 0,
       signature_validation: '0%',
-      retry_queue: 0
+      retry_queue: 0,
+      failing_domains: 0
     },
     servers: [],
+    failing_domains: [],
     recent_incoming: [],
     recent_outgoing: []
   });
+  const [networkGraph, setNetworkGraph] = useState({ nodes: [], edges: [] });
 
   const loadInspector = async () => {
     setIsLoading(true);
@@ -28,6 +31,8 @@ export default function FederationPage({ onNavigate }) {
     try {
       const data = await adminApi.getFederationInspector();
       setInspector(data);
+      const networkData = await adminApi.getFederationNetwork();
+      setNetworkGraph(networkData || { nodes: [], edges: [] });
     } catch (err) {
       setError(err.message || 'Failed to load federation inspector data');
     } finally {
@@ -63,6 +68,8 @@ export default function FederationPage({ onNavigate }) {
         return '#ffd700';
       case 'blocked':
         return '#ff4444';
+      case 'circuit_open':
+        return '#ff8844';
       default:
         return '#888';
     }
@@ -76,10 +83,69 @@ export default function FederationPage({ onNavigate }) {
         return '🟡';
       case 'blocked':
         return '🔴';
+      case 'circuit_open':
+        return '🟠';
       default:
         return '⚪';
     }
   };
+
+  const graphLayout = useMemo(() => {
+    const width = 760;
+    const height = 320;
+    const nodes = (networkGraph.nodes || []).map((node, index) => ({
+      ...node,
+      x: 60 + (index * 80) % (width - 120),
+      y: 80 + ((index * 40) % (height - 140)),
+      vx: 0,
+      vy: 0
+    }));
+
+    const nodeById = new Map(nodes.map((n) => [n.id, n]));
+    const edges = (networkGraph.edges || []).filter((edge) => nodeById.has(edge.source) && nodeById.has(edge.target));
+
+    for (let i = 0; i < 120; i++) {
+      for (const edge of edges) {
+        const source = nodeById.get(edge.source);
+        const target = nodeById.get(edge.target);
+        const dx = target.x - source.x;
+        const dy = target.y - source.y;
+        const distance = Math.sqrt(dx * dx + dy * dy) || 1;
+        const desired = 120;
+        const force = (distance - desired) * 0.0025;
+        const fx = (dx / distance) * force;
+        const fy = (dy / distance) * force;
+        source.vx += fx;
+        source.vy += fy;
+        target.vx -= fx;
+        target.vy -= fy;
+      }
+
+      for (let a = 0; a < nodes.length; a++) {
+        for (let b = a + 1; b < nodes.length; b++) {
+          const na = nodes[a];
+          const nb = nodes[b];
+          const dx = nb.x - na.x;
+          const dy = nb.y - na.y;
+          const distanceSq = dx * dx + dy * dy || 1;
+          const repulse = 240 / distanceSq;
+          na.vx -= dx * repulse * 0.0008;
+          na.vy -= dy * repulse * 0.0008;
+          nb.vx += dx * repulse * 0.0008;
+          nb.vy += dy * repulse * 0.0008;
+        }
+      }
+
+      for (const node of nodes) {
+        node.vx *= 0.86;
+        node.vy *= 0.86;
+        node.x = Math.max(30, Math.min(width - 30, node.x + node.vx));
+        node.y = Math.max(35, Math.min(height - 35, node.y + node.vy));
+      }
+    }
+
+    return { width, height, nodes, edges };
+  }, [networkGraph]);
 
   return (
     <div className="federation-container">
@@ -141,6 +207,61 @@ export default function FederationPage({ onNavigate }) {
             {isDarkMode ? '🌞' : '🌙'}
           </button>
         </div>
+
+        <div className="servers-section">
+          <h2 className="section-title">Federation Network Map</h2>
+          <div className="servers-table" style={{ padding: '12px' }}>
+            {(graphLayout.nodes || []).length === 0 ? (
+              <div style={{ color: '#888', padding: '8px 4px' }}>No network connections observed yet.</div>
+            ) : (
+              <svg viewBox={`0 0 ${graphLayout.width} ${graphLayout.height}`} style={{ width: '100%', height: '320px' }}>
+                {graphLayout.edges.map((edge, idx) => {
+                  const source = graphLayout.nodes.find((n) => n.id === edge.source);
+                  const target = graphLayout.nodes.find((n) => n.id === edge.target);
+                  if (!source || !target) return null;
+                  const strong = (edge.weight || 1) > 3;
+                  return (
+                    <line
+                      key={`edge-${idx}`}
+                      x1={source.x}
+                      y1={source.y}
+                      x2={target.x}
+                      y2={target.y}
+                      stroke={strong ? '#00d9ff' : '#6d7a9a'}
+                      strokeOpacity={0.75}
+                      strokeWidth={strong ? 2.2 : 1.4}
+                    />
+                  );
+                })}
+
+                {graphLayout.nodes.map((node) => {
+                  const isLocal = node.type === 'local';
+                  return (
+                    <g key={node.id}>
+                      <circle
+                        cx={node.x}
+                        cy={node.y}
+                        r={isLocal ? 11 : 9}
+                        fill={isLocal ? '#00d9ff' : '#8a7dff'}
+                        stroke="#d6deff"
+                        strokeWidth="1.2"
+                      />
+                      <text
+                        x={node.x}
+                        y={node.y - 14}
+                        textAnchor="middle"
+                        fill={isDarkMode ? '#d6deff' : '#2a2d3e'}
+                        fontSize="11"
+                      >
+                        {node.id}
+                      </text>
+                    </g>
+                  );
+                })}
+              </svg>
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="federation-content">
@@ -193,6 +314,43 @@ export default function FederationPage({ onNavigate }) {
                 <div className="metric-value">{inspector.metrics?.retry_queue || 0} pending</div>
               </div>
             </div>
+
+            <div className="metric-card">
+              <div className="metric-icon">⚠️</div>
+              <div className="metric-info">
+                <div className="metric-label">Failing Domains</div>
+                <div className="metric-value">{inspector.metrics?.failing_domains || 0}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="servers-section">
+          <h2 className="section-title">Retry Queue by Domain</h2>
+          <div className="servers-table">
+            <div className="table-header">
+              <div className="col-domain">Domain</div>
+              <div className="col-status">Queued</div>
+              <div className="col-status">Max Retry</div>
+              <div className="col-lastseen">Next Retry</div>
+              <div className="col-lastseen">Circuit Until</div>
+            </div>
+            {(inspector.failing_domains || []).map((domain, idx) => (
+              <div key={`${domain.domain || 'domain'}-${idx}`} className="table-row">
+                <div className="col-domain">
+                  <span className="domain-name">{domain.domain}</span>
+                </div>
+                <div className="col-status">{domain.queued || 0}</div>
+                <div className="col-status">{domain.max_retry_count || 0}</div>
+                <div className="col-lastseen">{domain.next_retry_at && domain.next_retry_at !== '—' ? new Date(domain.next_retry_at).toLocaleString() : '—'}</div>
+                <div className="col-lastseen">{domain.circuit_open_until && domain.circuit_open_until !== '—' ? new Date(domain.circuit_open_until).toLocaleString() : '—'}</div>
+              </div>
+            ))}
+            {(inspector.failing_domains || []).length === 0 && !isLoading && (
+              <div className="table-row">
+                <div className="col-domain" style={{ padding: '12px', color: '#888' }}>No failing domains in retry queue.</div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -285,6 +443,10 @@ export default function FederationPage({ onNavigate }) {
             <div className="legend-item">
               <span className="legend-color blocked">🔴</span>
               <span>Blocked - No communication allowed</span>
+            </div>
+            <div className="legend-item">
+              <span className="legend-color degraded">🟠</span>
+              <span>Circuit Open - Temporary cooldown after repeated failures</span>
             </div>
           </div>
         </div>
