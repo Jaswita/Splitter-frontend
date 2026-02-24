@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useTheme } from '@/components/ui/theme-provider';
 import '../styles/SecurityPage.css';
-import { userApi } from '@/lib/api';
+import { userApi, authApi } from '@/lib/api';
+import { generateKeyPair } from '@/lib/ed25519-browser';
 
 export default function SecurityPage({ onNavigate, userData, updateUserData }) {
   const { theme, toggleTheme } = useTheme();
@@ -11,6 +12,157 @@ export default function SecurityPage({ onNavigate, userData, updateUserData }) {
   const [showRecoveryCode, setShowRecoveryCode] = useState(false);
   const [copiedField, setCopiedField] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Key rotation state
+  const [isRotating, setIsRotating] = useState(false);
+  const [rotationResult, setRotationResult] = useState(null); // { success, message, newKey }
+  const [keyHistory, setKeyHistory] = useState([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [revokedKeys, setRevokedKeys] = useState([]);
+
+  // Inline key-check tool state
+  const [checkKeyInput, setCheckKeyInput] = useState('');
+  const [checkKeyResult, setCheckKeyResult] = useState(null); // { status, revoked }
+  const [isCheckingKey, setIsCheckingKey] = useState(false);
+
+  // Fetch fresh user data from server so public_key is up to date
+  const [livePublicKey, setLivePublicKey] = useState(userData?.public_key || null);
+  useEffect(() => {
+    userApi.getCurrentUser()
+      .then(u => {
+        const pk = u?.public_key || null;
+        setLivePublicKey(pk);
+        // Load revocation list
+        if (pk) {
+          setIsLoadingHistory(true);
+          authApi.getRevokedKeys()
+            .then(res => {
+              setRevokedKeys(res.revoked_keys || []);
+              setKeyHistory(res.revoked_keys || []);
+            })
+            .catch(() => { })
+            .finally(() => setIsLoadingHistory(false));
+        }
+      })
+      .catch(() => { }); // silently fail if /users/me is down
+  }, []);
+
+  const hasPublicKey = !!livePublicKey;
+
+  // ─── Initialize Key Handler (for accounts with no key yet) ──────────────
+  const handleInitializeKey = async () => {
+    const confirmed = window.confirm(
+      '🔑 Add Signing Key\n\nThis will generate a new Ed25519 key pair and register your public key with the server.\n\nYour private key stays only in this browser. Continue?'
+    );
+    if (!confirmed) return;
+
+    setIsRotating(true);
+    setRotationResult(null);
+
+    try {
+      // generateKeyPair uses crypto.getRandomValues + crypto.subtle SHA-512 — no library deps
+      const kp = await generateKeyPair();
+      const pubKeyB64 = btoa(String.fromCharCode(...kp.publicKey));
+
+      const result = await authApi.registerKey(pubKeyB64);
+
+      // Store 64-byte secretKey as hex
+      const skHex = Array.from(kp.secretKey).map(b => b.toString(16).padStart(2, '0')).join('');
+      localStorage.setItem('private_key', skHex);
+
+      const storedUser = localStorage.getItem('user');
+      if (storedUser) {
+        localStorage.setItem('user', JSON.stringify({ ...JSON.parse(storedUser), public_key: pubKeyB64 }));
+      }
+
+      setLivePublicKey(pubKeyB64);
+      setRotationResult({ success: true, message: result.message, newKey: pubKeyB64 });
+    } catch (err) {
+      setRotationResult({ success: false, message: err.message || 'Failed to initialize key' });
+    } finally {
+      setIsRotating(false);
+    }
+  };
+  // ─── Key Rotation Handler ────────────────────────────────────────────────
+  const handleRotateKey = async () => {
+    if (!hasPublicKey) {
+      alert('Key rotation is only available for DID-based accounts with a signing key.');
+      return;
+    }
+    const confirmed = window.confirm(
+      '🔄 Rotate Signing Key\n\nThis will generate a new key pair and replace your current one. Continue?'
+    );
+    if (!confirmed) return;
+
+    setIsRotating(true);
+    setRotationResult(null);
+
+    try {
+      // Generate new key pair — no signing needed, JWT auth is sufficient
+      const newKP = await generateKeyPair();
+      const newPubKeyB64 = btoa(String.fromCharCode(...newKP.publicKey));
+
+      const result = await authApi.rotateKey({ new_public_key: newPubKeyB64 });
+
+      // Store new 64-byte secretKey as 128-char hex
+      const newSkHex = Array.from(newKP.secretKey).map(b => b.toString(16).padStart(2, '0')).join('');
+      localStorage.setItem('private_key', newSkHex);
+
+      const storedUser = localStorage.getItem('user');
+      if (storedUser) {
+        localStorage.setItem('user', JSON.stringify({ ...JSON.parse(storedUser), public_key: newPubKeyB64 }));
+      }
+
+      setRotationResult({ success: true, message: result.message, newKey: newPubKeyB64 });
+      setLivePublicKey(newPubKeyB64);
+
+      const hist = await authApi.getKeyHistory();
+      setKeyHistory(hist.key_history || []);
+
+    } catch (err) {
+      setRotationResult({ success: false, message: err.message || 'Key rotation failed' });
+    } finally {
+      setIsRotating(false);
+    }
+  };
+
+  // ─── Revoke Key Handler ───────────────────────────────────────────
+  const handleRevokeKey = async () => {
+    const confirmed = window.confirm(
+      '⚠️ Revoke Signing Key\n\nThis will permanently disable your current signing key and move it to the revocation list. You will not be able to sign messages until you initialize a new key.\n\nContinue?'
+    );
+    if (!confirmed) return;
+
+    setIsRotating(true);
+    setRotationResult(null);
+
+    try {
+      const result = await authApi.revokeKey();
+
+      // Wipe private key from browser storage
+      localStorage.removeItem('private_key');
+
+      // Update local storage user object if exists
+      const storedUser = localStorage.getItem('user');
+      if (storedUser) {
+        localStorage.setItem('user', JSON.stringify({ ...JSON.parse(storedUser), public_key: null }));
+      }
+
+      setRotationResult({ success: true, message: result.message });
+      setLivePublicKey(null);
+
+      // Refresh revocation list
+      authApi.getRevokedKeys()
+        .then(res => setRevokedKeys(res.revoked_keys || []))
+        .catch(() => { });
+
+    } catch (err) {
+      setRotationResult({ success: false, message: err.message || 'Key revocation failed' });
+    } finally {
+      setIsRotating(false);
+    }
+  };
+
 
   // Privacy settings state
   const [defaultVisibility, setDefaultVisibility] = useState(userData?.default_visibility || 'public');
@@ -326,9 +478,29 @@ export default function SecurityPage({ onNavigate, userData, updateUserData }) {
           </div>
         </div>
 
-        {/* Actions Card */}
+        {/* Key Actions Card */}
         <div className="actions-card" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
           <h3 className="card-title" style={{ color: 'var(--text-primary)' }}>Key Actions</h3>
+
+          {/* Rotation result banner */}
+          {rotationResult && (
+            <div style={{
+              padding: '12px 16px',
+              marginBottom: '16px',
+              borderRadius: '8px',
+              background: rotationResult.success ? 'rgba(0,255,136,0.1)' : 'rgba(255,68,68,0.1)',
+              border: `1px solid ${rotationResult.success ? '#00ff88' : '#ff4444'}`,
+              color: rotationResult.success ? '#00ff88' : '#ff4444',
+              fontSize: '14px'
+            }}>
+              {rotationResult.success ? '✅ ' : '❌ '}{rotationResult.message}
+              {rotationResult.success && (
+                <div style={{ marginTop: '8px', fontSize: '11px', color: 'var(--text-secondary)', wordBreak: 'break-all' }}>
+                  New key: <code>{rotationResult.newKey?.substring(0, 32)}…</code>
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="actions-grid">
             <button
@@ -340,26 +512,173 @@ export default function SecurityPage({ onNavigate, userData, updateUserData }) {
             </button>
 
             <button
-              className="action-btn disabled"
-              disabled
-              title="Rotate Key - Sprint 2 feature"
-              style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: 'var(--text-secondary)' }}
+              className="action-btn primary"
+              onClick={hasPublicKey ? handleRotateKey : handleInitializeKey}
+              disabled={isRotating}
+              title={hasPublicKey
+                ? 'Generate a new Ed25519 key pair, signed by your current key'
+                : 'Generate an Ed25519 key pair and register your public key'}
+              style={{
+                background: hasPublicKey ? 'rgba(0,217,255,0.15)' : 'rgba(0,255,136,0.15)',
+                border: `1px solid ${hasPublicKey ? '#00d9ff' : '#00ff88'}`,
+                color: hasPublicKey ? '#00d9ff' : '#00ff88',
+                cursor: isRotating ? 'not-allowed' : 'pointer',
+                opacity: isRotating ? 0.7 : 1,
+              }}
             >
-              🔄 Rotate Key
-              <span className="disabled-label" style={{ color: 'var(--disabled-yellow)' }}>Sprint 2</span>
+              {isRotating
+                ? '⏳ Working…'
+                : hasPublicKey
+                  ? '🔄 Rotate Key'
+                  : '🔑 Initialize Key'}
             </button>
 
             <button
-              className="action-btn disabled"
-              disabled
-              title="Revoke Key - Sprint 2 feature"
-              style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: 'var(--text-secondary)' }}
+              className="action-btn"
+              onClick={handleRevokeKey}
+              disabled={!hasPublicKey || isRotating}
+              title={hasPublicKey ? 'Permanently disable current signing key' : 'No key to revoke'}
+              style={{
+                background: 'rgba(255,68,68,0.15)',
+                border: '1px solid #ff4444',
+                color: '#ff4444',
+                cursor: !hasPublicKey || isRotating ? 'not-allowed' : 'pointer',
+                opacity: !hasPublicKey || isRotating ? 0.7 : 1
+              }}
             >
               ✕ Revoke Key
-              <span className="disabled-label" style={{ color: 'var(--disabled-yellow)' }}>Sprint 2</span>
             </button>
           </div>
         </div>
+
+        {/* Revocation List */}
+        {hasPublicKey && (
+          <div className="status-card" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', marginTop: '0' }}>
+            <h3 className="card-title" style={{ color: 'var(--text-primary)' }}>🔐 Key Revocation List</h3>
+
+            {/* Active Key */}
+            <div style={{ marginBottom: '16px' }}>
+              <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>
+                Current Active Key
+              </div>
+              <div style={{
+                padding: '10px 14px', borderRadius: '8px', fontSize: '12px',
+                background: 'rgba(0,255,136,0.06)', border: '1px solid rgba(0,255,136,0.3)',
+                display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap'
+              }}>
+                <span style={{
+                  background: '#00ff88', color: '#000', borderRadius: '4px',
+                  padding: '2px 8px', fontSize: '10px', fontWeight: 700, flexShrink: 0
+                }}>🟢 ACTIVE</span>
+                <code style={{ color: '#00ff88', wordBreak: 'break-all', flexGrow: 1 }}>
+                  {livePublicKey?.substring(0, 44)}…
+                </code>
+                <button
+                  onClick={() => handleCopyToClipboard(livePublicKey, 'activekey')}
+                  style={{ background: 'transparent', border: '1px solid rgba(0,255,136,0.4)', color: '#00ff88', borderRadius: '4px', padding: '2px 8px', fontSize: '11px', cursor: 'pointer' }}
+                >
+                  {copiedField === 'activekey' ? '✓' : 'Copy'}
+                </button>
+              </div>
+            </div>
+
+            {/* Revoked Keys */}
+            <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>
+              Revoked Keys ({revokedKeys.length})
+            </div>
+            {isLoadingHistory ? (
+              <div style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Loading…</div>
+            ) : revokedKeys.length === 0 ? (
+              <div style={{ color: 'var(--text-secondary)', fontSize: '13px', padding: '10px', background: isDarkMode ? '#1a1a2e' : '#f5f5f5', borderRadius: '8px' }}>
+                No revoked keys — your original key is still your only key.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {revokedKeys.map((entry, i) => (
+                  <div key={entry.id || i} style={{
+                    padding: '10px 14px', borderRadius: '8px', fontSize: '12px',
+                    background: 'rgba(255,68,68,0.05)', border: '1px solid rgba(255,68,68,0.25)'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', flexWrap: 'wrap' }}>
+                      <span style={{
+                        background: '#ff4444', color: '#fff', borderRadius: '4px',
+                        padding: '2px 8px', fontSize: '10px', fontWeight: 700, flexShrink: 0
+                      }}>🔴 REVOKED</span>
+                      <span style={{
+                        background: isDarkMode ? '#2a1a1a' : '#ffeaea', color: 'var(--text-secondary)',
+                        borderRadius: '4px', padding: '2px 8px', fontSize: '10px', flexShrink: 0
+                      }}>
+                        {entry.reason || 'rotated'}
+                      </span>
+                      <span style={{ color: 'var(--text-secondary)', fontSize: '11px', marginLeft: 'auto' }}>
+                        🗓 {new Date(entry.rotated_at).toLocaleString()}
+                      </span>
+                    </div>
+                    <div style={{ color: '#ff8888', wordBreak: 'break-all', marginBottom: '4px' }}>
+                      <strong>Key:</strong> <code>{entry.old_public_key?.substring(0, 44)}…</code>
+                    </div>
+                    <div style={{ color: 'var(--text-secondary)', wordBreak: 'break-all' }}>
+                      <strong>Replaced by:</strong> <code>{entry.new_public_key?.substring(0, 32)}…</code>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Check Key Tool */}
+            <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid var(--border-color)' }}>
+              <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '8px' }}>
+                🔍 Check Key Status
+              </div>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <input
+                  type="text"
+                  placeholder="Paste a base64 public key…"
+                  value={checkKeyInput}
+                  onChange={e => { setCheckKeyInput(e.target.value); setCheckKeyResult(null); }}
+                  style={{
+                    flex: 1, minWidth: '200px', padding: '8px 12px', borderRadius: '6px', fontSize: '12px',
+                    background: isDarkMode ? '#1a1a2e' : '#f5f5f5',
+                    border: '1px solid var(--border-color)', color: 'var(--text-primary)', outline: 'none'
+                  }}
+                />
+                <button
+                  disabled={!checkKeyInput.trim() || isCheckingKey}
+                  onClick={async () => {
+                    setIsCheckingKey(true);
+                    try {
+                      const res = await authApi.checkKeyRevocation(checkKeyInput.trim());
+                      setCheckKeyResult(res);
+                    } catch (e) {
+                      setCheckKeyResult({ status: 'error', revoked: false });
+                    } finally {
+                      setIsCheckingKey(false);
+                    }
+                  }}
+                  style={{
+                    padding: '8px 16px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer',
+                    background: 'var(--primary-cyan)', color: '#000', border: 'none', fontWeight: 600,
+                    opacity: !checkKeyInput.trim() || isCheckingKey ? 0.5 : 1
+                  }}
+                >
+                  {isCheckingKey ? '…' : 'Check'}
+                </button>
+              </div>
+              {checkKeyResult && (
+                <div style={{
+                  marginTop: '8px', padding: '8px 12px', borderRadius: '6px', fontSize: '12px',
+                  background: checkKeyResult.revoked ? 'rgba(255,68,68,0.1)' : checkKeyResult.status === 'error' ? 'rgba(255,170,0,0.1)' : 'rgba(0,255,136,0.1)',
+                  border: `1px solid ${checkKeyResult.revoked ? '#ff4444' : checkKeyResult.status === 'error' ? '#ffaa00' : '#00ff88'}`,
+                  color: checkKeyResult.revoked ? '#ff4444' : checkKeyResult.status === 'error' ? '#ffaa00' : '#00ff88'
+                }}>
+                  {checkKeyResult.status === 'error' ? '⚠️ Could not check key status' :
+                    checkKeyResult.revoked ? '🔴 REVOKED — this key has been rotated out' :
+                      '🟢 ACTIVE — this key is not in the revocation list'}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Security Tips Card */}
         <div className="security-tips-card" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>

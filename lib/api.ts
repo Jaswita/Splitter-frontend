@@ -221,6 +221,58 @@ export const authApi = {
     return result;
   },
 
+  async registerKey(publicKey: string) {
+    const response = await fetch(`${API_BASE}/auth/register-key`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ public_key: publicKey })
+    });
+    return handleResponse<{ message: string; public_key: string }>(response);
+  },
+
+  async rotateKey(data: {
+    new_public_key: string;
+    signature?: string;
+    nonce?: string;
+    timestamp?: number;
+  }) {
+    const response = await fetch(`${API_BASE}/auth/rotate-key`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data)
+    });
+    return handleResponse<{ message: string; new_public_key: string; rotated_at: string }>(response);
+  },
+
+  async getKeyHistory() {
+    const response = await fetch(`${API_BASE}/auth/key-history`, {
+      headers: getAuthHeaders()
+    });
+    return handleResponse<{ key_history: any[]; count: number }>(response);
+  },
+
+  async getRevokedKeys() {
+    const response = await fetch(`${API_BASE}/auth/revoked-keys`, {
+      headers: getAuthHeaders()
+    });
+    return handleResponse<{ did: string; active_key: string; revoked_keys: any[]; count: number }>(response);
+  },
+
+  async checkKeyRevocation(publicKey: string) {
+    const response = await fetch(`${API_BASE}/auth/check-key?key=${encodeURIComponent(publicKey)}`, {
+      headers: getAuthHeaders()
+    });
+    return handleResponse<{ key: string; status: string; revoked: boolean }>(response);
+  },
+
+  async revokeKey() {
+    const response = await fetch(`${API_BASE}/auth/revoke-key`, {
+      method: 'POST',
+      headers: getAuthHeaders()
+    });
+    return handleResponse<{ message: string }>(response);
+  },
+
   isLoggedIn() {
     if (typeof window === 'undefined') return false;
     return !!localStorage.getItem('jwt_token');
