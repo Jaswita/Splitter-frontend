@@ -1,8 +1,6 @@
 name: Frontend Deploy (Template)
 
 on:
-  push:
-    branches: [ main ]
   workflow_dispatch:
 
 permissions:
@@ -11,7 +9,14 @@ permissions:
 jobs:
   deploy-frontend:
     runs-on: ubuntu-latest
-    if: ${{ secrets.FRONTEND_DEPLOY_HOOK_URL != '' }}
+    env:
+      FRONTEND_HOOK: ${{ secrets.FRONTEND_DEPLOY_HOOK_URL }}
     steps:
       - name: Trigger frontend deploy hook
-        run: curl -fsS -X POST "${{ secrets.FRONTEND_DEPLOY_HOOK_URL }}"
+        shell: bash
+        run: |
+          if [ -z "${FRONTEND_HOOK}" ]; then
+            echo "Skipping frontend deploy: FRONTEND_DEPLOY_HOOK_URL is not configured."
+            exit 0
+          fi
+          curl -fsS -X POST "${FRONTEND_HOOK}"
