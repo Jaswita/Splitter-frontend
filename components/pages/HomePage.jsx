@@ -1010,7 +1010,7 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
                 value={newPostText}
                 onChange={(e) => setNewPostText(e.target.value)}
                 maxLength="500"
-                disabled={isPosting}
+                disabled={isPosting || isOffline}
               />
 
               {/* Media Preview */}
@@ -1107,7 +1107,7 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
                     className="composer-btn-media"
                     onClick={() => document.getElementById('post-media-input').click()}
                     title="Attach media (max 5MB)"
-                    disabled={isPosting}
+                    disabled={isPosting || isOffline}
                     style={{
                       background: 'none',
                       border: 'none',
@@ -1118,9 +1118,9 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
                     🖼️ Media
                   </button>
                   <button
-                    className={`composer-btn-post ${(!newPostText.trim() && !selectedFile) || isPosting ? 'disabled' : ''}`}
+                    className={`composer-btn-post ${(!newPostText.trim() && !selectedFile) || isPosting || isOffline ? 'disabled' : ''}`}
                     onClick={handlePostCreate}
-                    disabled={(!newPostText.trim() && !selectedFile) || isPosting}
+                    disabled={(!newPostText.trim() && !selectedFile) || isPosting || isOffline}
                   >
                     {isPosting ? 'Posting...' : 'Post'}
                   </button>
