@@ -479,6 +479,10 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
   };
 
   const handlePostCreate = async () => {
+    if (isOffline) {
+      alert("You're offline. This action is disabled.");
+      return;
+    }
     // allow text OR image OR both
     if (!newPostText.trim() && !selectedFile) return;
 
@@ -536,6 +540,10 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
   };
 
   const handleEditSave = async (postId) => {
+    if (isOffline) {
+      alert("You're offline. This action is disabled.");
+      return;
+    }
     if (!editText.trim()) return;
 
     try {
@@ -554,6 +562,10 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
 
   // Delete post
   const handleDeleteConfirm = async (postId) => {
+    if (isOffline) {
+      alert("You're offline. This action is disabled.");
+      return;
+    }
     try {
       await postApi.deletePost(postId);
       setPosts(prev => prev.filter(p => p.id !== postId));
@@ -564,6 +576,10 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
   };
 
   const handleLike = async (postId) => {
+    if (isOffline) {
+      alert("You're offline. This action is disabled.");
+      return;
+    }
     try {
       const post = posts.find(p => p.id === postId);
       if (post?.liked) {
@@ -583,6 +599,10 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
   };
 
   const handleRepost = async (postId) => {
+    if (isOffline) {
+      alert("You're offline. This action is disabled.");
+      return;
+    }
     try {
       const post = posts.find(p => p.id === postId);
       if (post?.reposted) {
@@ -1219,13 +1239,15 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
                         </button>
                         <button
                           onClick={() => handleEditSave(post.id)}
+                          disabled={isOffline}
                           style={{
                             padding: '6px 12px',
                             background: 'rgba(0,255,136,0.2)',
                             border: '1px solid #00ff88',
                             color: '#00ff88',
                             borderRadius: '4px',
-                            cursor: 'pointer'
+                            cursor: isOffline ? 'not-allowed' : 'pointer',
+                            opacity: isOffline ? 0.5 : 1
                           }}
                         >
                           Save
@@ -1286,13 +1308,15 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
                       </button>
                       <button
                         onClick={() => handleDeleteConfirm(post.id)}
+                        disabled={isOffline}
                         style={{
                           padding: '6px 12px',
                           background: '#ff4444',
                           border: 'none',
                           color: '#fff',
                           borderRadius: '4px',
-                          cursor: 'pointer'
+                          cursor: isOffline ? 'not-allowed' : 'pointer',
+                          opacity: isOffline ? 0.5 : 1
                         }}
                       >
                         Delete
@@ -1313,6 +1337,7 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
                   <button
                     className={`post-action ${post.reposted ? 'active' : ''}`}
                     onClick={() => handleRepost(post.id)}
+                    disabled={isOffline}
                     style={post.reposted ? { color: '#00d9ff' } : {}}
                     title={post.reposted ? 'Undo repost' : 'Repost to your followers'}
                   >
@@ -1322,6 +1347,7 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
                   <button
                     className={`post-action ${post.liked ? 'active' : ''}`}
                     onClick={() => handleLike(post.id)}
+                    disabled={isOffline}
                     style={post.liked ? { color: '#ff4444' } : {}}
                     title={post.liked ? 'Unlike' : 'Like this post'}
                   >
@@ -1335,6 +1361,7 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
                       <button
                         className="post-action"
                         onClick={() => handleEditStart(post)}
+                        disabled={isOffline}
                         title="Edit post"
                         style={{ marginLeft: 'auto' }}
                       >
@@ -1343,6 +1370,7 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
                       <button
                         className="post-action"
                         onClick={() => setDeleteConfirmId(post.id)}
+                        disabled={isOffline}
                         title="Delete post"
                         style={{ color: '#ff4444' }}
                       >
