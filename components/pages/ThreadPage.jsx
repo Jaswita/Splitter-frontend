@@ -29,7 +29,8 @@ const ReplyItem = ({
   setReplyingToId,
   onSubmitReply,
   isSubmitting,
-  userData
+  userData,
+  isOffline
 }) => {
   const [replyText, setReplyText] = useState('');
   const isReplying = replyingToId === reply.id;
@@ -84,6 +85,7 @@ const ReplyItem = ({
             value={replyText}
             onChange={(e) => setReplyText(e.target.value)}
             autoFocus
+            disabled={isOffline}
           />
           <div className="composer-actions">
             <button
@@ -95,7 +97,7 @@ const ReplyItem = ({
             <button
               className="reply-button"
               onClick={handleSubmit}
-              disabled={!replyText.trim() || isSubmitting}
+              disabled={isOffline || !replyText.trim() || isSubmitting}
             >
               {isSubmitting ? 'Posting...' : 'Reply'}
             </button>
@@ -115,6 +117,7 @@ const ReplyItem = ({
               onSubmitReply={onSubmitReply}
               isSubmitting={isSubmitting}
               userData={userData}
+              isOffline={isOffline}
             />
           ))}
         </div>
@@ -314,6 +317,7 @@ export default function ThreadPage({ onNavigate, postId, userData }) {
               onSubmitReply={handlePostReply}
               isSubmitting={isSubmitting}
               userData={userData}
+              isOffline={isOffline}
             />
           ))
         )}
@@ -326,6 +330,7 @@ export default function ThreadPage({ onNavigate, postId, userData }) {
             value={mainReplyText}
             onChange={(e) => setMainReplyText(e.target.value)}
             placeholder="Write a reply..."
+            disabled={isOffline}
           />
           <div className="composer-actions">
             <button
@@ -337,7 +342,7 @@ export default function ThreadPage({ onNavigate, postId, userData }) {
             <button
               className="reply-button"
               onClick={handleMainReplySubmit}
-              disabled={!mainReplyText.trim() || isSubmitting}
+              disabled={isOffline || !mainReplyText.trim() || isSubmitting}
             >
               {isSubmitting ? 'Posting...' : 'Reply'}
             </button>
