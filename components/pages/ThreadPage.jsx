@@ -157,6 +157,16 @@ export default function ThreadPage({ onNavigate, postId, userData }) {
   }, [postId]);
 
   const loadThreadData = async () => {
+    if (!navigator.onLine) {
+      const cached = localStorage.getItem(`thread_cache_${postId}`);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        setPost(parsed.post || null);
+        setRepliesTree(buildReplyTree(parsed.replies || []));
+      }
+      setIsLoading(false);
+      return;
+    }
     setIsLoading(true);
     try {
       const postData = await postApi.getPost(postId);
