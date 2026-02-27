@@ -208,6 +208,10 @@ export default function ThreadPage({ onNavigate, postId, userData }) {
   };
 
   const handlePostReply = async (parentId, content) => {
+    if (isOffline) {
+      alert("You're offline. This action is disabled.");
+      return;
+    }
     if (!postId) {
       console.error('Cannot create reply: postId is missing');
       return;
@@ -232,6 +236,10 @@ export default function ThreadPage({ onNavigate, postId, userData }) {
   };
 
   const handleMainReplySubmit = async () => {
+    if (isOffline) {
+      alert("You're offline. This action is disabled.");
+      return;
+    }
     if (!mainReplyText.trim()) return;
     await handlePostReply(null, mainReplyText);
     setMainReplyText('');
