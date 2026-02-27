@@ -969,6 +969,21 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
 
         {/* Main Feed */}
         <main className="home-feed">
+          {isOffline && (
+            <div
+              style={{
+                background: "rgba(255,170,0,0.15)",
+                border: "1px solid #ffaa00",
+                color: "#ffaa00",
+                padding: "10px",
+                borderRadius: "8px",
+                marginBottom: "16px",
+                textAlign: "center"
+              }}
+            >
+              ⚠️ You are offline. Viewing cached posts (read-only mode).
+            </div>
+          )}
           {/* Error display */}
           {error && (
             <div style={{
