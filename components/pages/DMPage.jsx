@@ -271,41 +271,23 @@ export default function DMPage({ onNavigate, userData, selectedUser }) {
       if (!sharedSecret || messages.length === 0) return;
 
       const decryptedMessages = await Promise.all(messages.map(async (msg) => {
-        // Skip decrypting messages sent by current user
-        if (msg.sender_id === userData?.id) {
-          return { ...msg, decrypted: true };
-        }
+        // Skip already decrypted messages
+        if (msg.decrypted) return msg;
 
-        // Skip plaintext messages
+        // Skip plaintext messages (no ciphertext present)
         if (!msg.ciphertext) {
           return { ...msg, decrypted: true };
         }
 
-        // Skip already decrypted
-        if (msg.decrypted) {
-          return msg;
-        }
-
         try {
-          // Ciphertext format expected: "ciphertext|iv" or separate fields. 
-          // My backend stores "ciphertext" and "iv"? 
-          // Wait, backend model only has Ciphertext string. 
-          // In crypto.ts encryptMessage returns { ciphertext, iv }.
-          // I should combine them or store IV separately.
-          // Current Plan: I'll store them as JSON string or delimiter separated in the single "ciphertext" column if I can't change schema easily.
-          // Reviewing backend `SendMessage`: it takes `ciphertext` string.
-          // I will store JSON.stringify({ c: ciphertext, iv: iv }) in the ciphertext column.
-
           let iv, content;
           try {
             const parsed = JSON.parse(msg.ciphertext);
             iv = parsed.iv;
             content = parsed.c;
           } catch (e) {
-            // Legacy or simple format if I changed my mind? 
-            // Let's assume JSON format for now.
             console.error("Invalid ciphertext format", e);
-            return { ...msg, content: '⚠️ Invalid format', decrypted: true, error: true };
+            return { ...msg, content: '🔒 Encrypted message', decrypted: true, error: true };
           }
 
           const decryptedText = await decryptMessage(content, iv, sharedSecret);
@@ -317,7 +299,7 @@ export default function DMPage({ onNavigate, userData, selectedUser }) {
       }));
 
       const needsUpdate = decryptedMessages.some((msg, i) =>
-        msg.content !== messages[i]?.content
+        msg.content !== messages[i]?.content || msg.decrypted !== messages[i]?.decrypted
       );
       if (needsUpdate) {
         setMessages(decryptedMessages);
