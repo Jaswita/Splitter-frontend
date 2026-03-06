@@ -42,6 +42,7 @@ export default function DMPage({ onNavigate, userData, selectedUser }) {
   const [editMessage, setEditMessage] = useState('');
 
   const messagesEndRef = useRef(null);
+  const sharedSecretsRef = useRef({});
 
   const getOfflineQueueKey = () => {
     const uid = userData?.id || 'anonymous';
@@ -214,6 +215,13 @@ export default function DMPage({ onNavigate, userData, selectedUser }) {
       const otherUser = getOtherUser(selectedThread);
       let otherUserPublicKey = otherUser.encryption_public_key;
 
+      if (!otherUserPublicKey) {
+        try {
+          const profile = await userApi.getUserProfile(otherUser.id);
+          otherUserPublicKey = profile.encryption_public_key;
+        } catch { }
+      }
+
       if (!otherUserPublicKey && otherUser?.is_remote) {
         const resolvedKey = await resolveRemoteRecipientKey(otherUser);
         if (resolvedKey) {
@@ -233,9 +241,18 @@ export default function DMPage({ onNavigate, userData, selectedUser }) {
         return;
       }
 
+      const cacheKey = otherUser.id;
+      if (sharedSecretsRef.current[cacheKey]) {
+        setSharedSecret(sharedSecretsRef.current[cacheKey]);
+        setIsEncryptionReady(true);
+        setEncryptionStatus('ready');
+        return;
+      }
+
       try {
         const importedPublicKey = await importEncryptionPublicKey(otherUserPublicKey);
         const secret = await deriveSharedSecret(myKeyPair.encryptionPrivateKey, importedPublicKey);
+        sharedSecretsRef.current[cacheKey] = secret;
         setSharedSecret(secret);
         setIsEncryptionReady(true);
         setEncryptionStatus('ready');
