@@ -316,9 +316,9 @@ export default function DMPage({ onNavigate, userData, selectedUser }) {
         }
       }));
 
-      // Only update if there are changes to avoid loops
-      // Simple check: check if any message was not decrypted and now is
-      const needsUpdate = messages.some((m, i) => !m.decrypted && decryptedMessages[i].decrypted);
+      const needsUpdate = decryptedMessages.some((msg, i) =>
+        msg.content !== messages[i]?.content
+      );
       if (needsUpdate) {
         setMessages(decryptedMessages);
       }
