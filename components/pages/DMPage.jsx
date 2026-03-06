@@ -218,7 +218,7 @@ export default function DMPage({ onNavigate, userData, selectedUser }) {
       if (!otherUserPublicKey) {
         try {
           const profile = await userApi.getUserProfile(otherUser.id);
-          otherUserPublicKey = profile.encryption_public_key;
+          otherUserPublicKey = profile?.encryption_public_key;
         } catch { }
       }
 
