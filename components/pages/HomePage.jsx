@@ -1204,7 +1204,7 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
             {dedupePosts(posts).map((post, idx) => (
               <article key={`${post.id}-${post.authorId || post.author_did || 'author'}-${post.createdAt || idx}-${idx}`} className={`post ${post.local ? 'local' : 'remote'}`}>
                 <div className="post-header">
-                  <div className="post-author" style={{ cursor: 'pointer' }} onClick={() => onNavigate('profile')}>
+                  <div className="post-author" style={{ cursor: 'pointer' }} onClick={() => onNavigate('thread', { postId: post.id })}>
                     <span className="post-avatar">
                       {isImageAvatar(post.avatar) ? (
                         <img src={resolveAssetURL(post.avatar, post.domain)} alt="Post author avatar" className="avatar-image-fill" />

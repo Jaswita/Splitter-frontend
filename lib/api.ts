@@ -401,7 +401,9 @@ export const postApi = {
   },
 
   async getPost(id: string) {
-    const response = await fetch(`${apiBase()}/posts/${id}`);
+    const response = await fetch(`${apiBase()}/posts/${id}`, {
+      headers: getAuthHeaders()
+    });
     return handleResponse<any>(response);
   },
 
@@ -445,7 +447,9 @@ export const postApi = {
   },
 
   async getReplies(postId: string) {
-    const response = await fetch(`${apiBase()}/posts/${postId}/replies`);
+    const response = await fetch(`${apiBase()}/posts/${postId}/replies`, {
+      headers: getAuthHeaders()
+    });
     return handleResponse<any[]>(response);
   },
 
