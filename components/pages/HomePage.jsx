@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import '../styles/HomePage.css';
 import { postApi, interactionApi, adminApi, searchApi, messageApi, federationApi, hashtagApi, getCurrentInstance } from '@/lib/api';
+import StoriesBar from '@/components/pages/StoriesBar';
 import HomePageWalkthrough from '@/components/ui/HomePageWalkthrough';
 
 // Sample posts for demo when no backend posts available
@@ -1079,6 +1080,9 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
 
         {/* Main Feed */}
         <main className="home-feed">
+          {/* Stories Bar */}
+          <StoriesBar userData={userData} resolveAssetURL={resolveAssetURL} />
+
           {isOffline && (
             <div
               style={{

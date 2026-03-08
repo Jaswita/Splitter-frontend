@@ -963,6 +963,46 @@ export const hashtagApi = {
   }
 };
 
+// Story API
+export const storyApi = {
+  async createStory(file: File) {
+    const fd = new FormData();
+    fd.append('file', file);
+
+    const token = typeof window !== 'undefined' ? localStorage.getItem('jwt_token') : null;
+    const headers: HeadersInit = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(`${apiBase()}/stories`, {
+      method: 'POST',
+      headers,
+      body: fd
+    });
+    return handleResponse<any>(response);
+  },
+
+  async getStoryFeed() {
+    const response = await fetch(`${apiBase()}/stories/feed`, {
+      headers: getAuthHeaders()
+    });
+    return handleResponse<{ stories: any[] }>(response);
+  },
+
+  async deleteStory(id: string) {
+    const response = await fetch(`${apiBase()}/stories/${id}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    });
+    return handleResponse<{ message: string }>(response);
+  },
+
+  getStoryMediaUrl(storyId: string): string {
+    return `${apiBase()}/stories/${storyId}/media`;
+  }
+};
+
 export const api = {
   auth: authApi,
   user: userApi,
@@ -974,7 +1014,8 @@ export const api = {
   message: messageApi,
   admin: adminApi,
   federation: federationApi,
-  hashtag: hashtagApi
+  hashtag: hashtagApi,
+  story: storyApi
 };
 
 export default api;
