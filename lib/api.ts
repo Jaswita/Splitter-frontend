@@ -963,36 +963,41 @@ export const hashtagApi = {
   }
 };
 
+// Story API
 export const storyApi = {
-  async getStories() {
-    const response = await fetch(`${apiBase()}/stories`, {
+
+  async getStoryFeed() {
+    const response = await fetch(`${apiBase()}/stories/feed`, {
       headers: getAuthHeaders()
     });
-    return handleResponse<any[]>(response);
+    return handleResponse<{ stories: any[] }>(response);
   },
 
   async createStory(file: File) {
-    const formData = new FormData();
-    formData.append('file', file);
+    const fd = new FormData();
+    fd.append('file', file);
 
-    // We shouldn't set Content-Type to application/json, browser will set multipart/form-data
-    const headers = getAuthHeaders() as Record<string, string>;
-    delete headers['Content-Type'];
+    const token = typeof window !== 'undefined' ? localStorage.getItem('jwt_token') : null;
+    const headers: HeadersInit = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
 
     const response = await fetch(`${apiBase()}/stories`, {
       method: 'POST',
       headers,
-      body: formData
+      body: fd
     });
+
     return handleResponse<any>(response);
   },
 
-  async deleteStory(storyId: string) {
-    const response = await fetch(`${apiBase()}/stories/${storyId}`, {
+  async deleteStory(id: string) {
+    const response = await fetch(`${apiBase()}/stories/${id}`, {
       method: 'DELETE',
       headers: getAuthHeaders()
     });
-    return handleResponse<any>(response);
+    return handleResponse<{ message: string }>(response);
   },
 
   async viewStory(storyId: string) {
@@ -1001,6 +1006,10 @@ export const storyApi = {
       headers: getAuthHeaders()
     });
     return handleResponse<any>(response);
+  },
+
+  getStoryMediaUrl(storyId: string): string {
+    return `${apiBase()}/stories/${storyId}/media`;
   }
 };
 

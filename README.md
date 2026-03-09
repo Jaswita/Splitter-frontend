@@ -7,10 +7,11 @@ A modern, privacy-first social network interface built with **Next.js 16**, **Ta
 This is a **Single Page Application (SPA)** architecture hosted within the Next.js App Router. It features **12 fully functional pages** including a complete authentication flow, social feed, direct messaging, and admin tools.
 
 ### 🔑 Key Features
+*   **Dynamic Threading & Discovery**: Real-time multi-level replies tree display, dynamic hashtag extraction (`#tag`), global search, and a live trending sidebar.
 *   **Decentralized Identity (DID)**: Users generate keys in-browser; private keys never leave the device.
-*   **Federation Simulation**: Browse and "connect" to different server instances.
+*   **Federation Simulation**: Browse and "connect" to different backend server instances.
 *   **Light & Dark Mode**: Smooth peach light theme and neon-accented dark theme with toggle support.
-*   **Mock Backend**: Runs entirely in the browser with local state, but includes API hooks for a real Go backend.
+*   **Live Cloud Backend Integration**: Directly interfaces with the Render Go/Echo SQL-backed API (removing previous mock data bottlenecks).
 
 ## 🛠️ Technology Stack
 

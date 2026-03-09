@@ -1087,6 +1087,7 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
 
         {/* Main Feed */}
         <main className="home-feed">
+          {/* Stories Bar */}
           <StoriesBar currentUser={userData} />
           {isOffline && (
             <div
