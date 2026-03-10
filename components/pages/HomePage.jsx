@@ -562,6 +562,12 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
 
       setPosts(prev => dedupePosts([transformedPost, ...prev]));
 
+      // Refresh trending hashtags after posting (in case new hashtags were used)
+      try {
+        const freshTrending = await hashtagApi.getTrending(5);
+        setTrendingHashtags(Array.isArray(freshTrending) ? freshTrending : []);
+      } catch (_) {}
+
       // reset composer
       setNewPostText('');
       setSelectedFile(null);

@@ -10,8 +10,8 @@
 
 .hashtag-back-btn {
   background: none;
-  border: 1px solid #333;
-  color: #e0e0e0;
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
   padding: 8px 16px;
   border-radius: 8px;
   cursor: pointer;
@@ -21,25 +21,25 @@
 }
 
 .hashtag-back-btn:hover {
-  background: #1a1a2e;
+  background: var(--bg-tertiary);
 }
 
 .hashtag-page-header h1 {
   font-size: 28px;
-  color: #6c5ce7;
+  color: var(--primary-cyan);
   margin: 0 0 6px 0;
 }
 
 .hashtag-count {
-  color: #888;
+  color: var(--text-muted);
   font-size: 14px;
   margin: 0 0 12px 0;
 }
 
 .hashtag-trending-link {
-  background: rgba(108, 92, 231, 0.15);
-  border: 1px solid #6c5ce7;
-  color: #6c5ce7;
+  background: var(--cyan-glow);
+  border: 1px solid var(--primary-cyan);
+  color: var(--primary-cyan);
   padding: 6px 14px;
   border-radius: 8px;
   cursor: pointer;
@@ -48,7 +48,7 @@
 }
 
 .hashtag-trending-link:hover {
-  background: rgba(108, 92, 231, 0.3);
+  opacity: 0.85;
 }
 
 .hashtag-loading {
@@ -56,14 +56,14 @@
   flex-direction: column;
   align-items: center;
   padding: 60px 0;
-  color: #888;
+  color: var(--text-muted);
 }
 
 .hashtag-spinner {
   width: 32px;
   height: 32px;
-  border: 3px solid #333;
-  border-top-color: #6c5ce7;
+  border: 3px solid var(--border-color);
+  border-top-color: var(--primary-cyan);
   border-radius: 50%;
   animation: hashtag-spin 0.8s linear infinite;
   margin-bottom: 12px;
@@ -81,8 +81,8 @@
 
 .hashtag-error button {
   margin-top: 12px;
-  background: #6c5ce7;
-  color: #fff;
+  background: var(--primary-cyan);
+  color: var(--btn-text);
   border: none;
   padding: 8px 20px;
   border-radius: 8px;
@@ -92,7 +92,7 @@
 .hashtag-empty {
   text-align: center;
   padding: 60px 0;
-  color: #888;
+  color: var(--text-muted);
 }
 
 .hashtag-posts {
@@ -102,8 +102,8 @@
 }
 
 .hashtag-post-card {
-  background: #16162a;
-  border: 1px solid #2a2a4a;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
   border-radius: 12px;
   padding: 16px;
   cursor: pointer;
@@ -111,8 +111,8 @@
 }
 
 .hashtag-post-card:hover {
-  background: #1e1e3a;
-  border-color: #6c5ce7;
+  background: var(--bg-tertiary);
+  border-color: var(--primary-cyan);
 }
 
 .hashtag-post-header {
@@ -127,7 +127,7 @@
   height: 40px;
   border-radius: 50%;
   overflow: hidden;
-  background: #2a2a4a;
+  background: var(--bg-tertiary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -151,17 +151,17 @@
 }
 
 .hashtag-post-username {
-  color: #e0e0e0;
+  color: var(--text-primary);
   font-size: 14px;
 }
 
 .hashtag-post-time {
-  color: #666;
+  color: var(--text-muted);
   font-size: 12px;
 }
 
 .hashtag-post-content {
-  color: #ccc;
+  color: var(--text-secondary);
   font-size: 15px;
   line-height: 1.5;
   margin-bottom: 10px;
@@ -169,7 +169,7 @@
 }
 
 .hashtag-link {
-  color: #6c5ce7;
+  color: var(--primary-cyan);
   cursor: pointer;
   font-weight: 500;
 }
@@ -192,6 +192,6 @@
 .hashtag-post-stats {
   display: flex;
   gap: 20px;
-  color: #888;
+  color: var(--text-muted);
   font-size: 13px;
 }
