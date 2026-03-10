@@ -27,9 +27,17 @@ export default function TrendingPage({ onNavigate }) {
     }
   };
 
+  const [searchQuery, setSearchQuery] = useState('');
+
   const formatCount = (count) => {
     if (count >= 1000) return (count / 1000).toFixed(1) + 'K';
     return count.toString();
+  };
+
+  const handleSearchSubmit = (e) => {
+    if (e.key === 'Enter' && searchQuery.trim()) {
+      onNavigate('hashtag', { hashtag: searchQuery.trim().replace(/^#/, '') });
+    }
   };
 
   return (
@@ -38,9 +46,31 @@ export default function TrendingPage({ onNavigate }) {
         <button className="trending-back-btn" onClick={() => onNavigate('home')}>
           ← Back
         </button>
-        <h1>Trending Now</h1>
-        <p className="trending-subtitle">Most popular hashtags in the last 24 hours</p>
+        <h1>Explore</h1>
+        
+        <div style={{ marginTop: '16px', position: 'relative' }}>
+          <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', opacity: 0.5 }}>🔍</span>
+          <input 
+            type="text" 
+            placeholder="Search hashtags... (Press Enter)"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={handleSearchSubmit}
+            style={{
+              width: '100%',
+              padding: '12px 12px 12px 40px',
+              borderRadius: '20px',
+              border: '1px solid var(--border-color, #333)',
+              background: 'var(--bg-card, rgba(0,0,0,0.2))',
+              color: 'var(--text-primary, #fff)',
+              fontSize: '16px',
+              outline: 'none'
+            }}
+          />
+        </div>
       </div>
+
+      <h2 style={{ padding: '0 24px', marginTop: '16px', fontSize: '18px', color: 'var(--text-secondary, #aaa)' }}>Trending Now</h2>
 
       {loading && (
         <div className="trending-loading">

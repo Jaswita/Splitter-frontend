@@ -15,6 +15,7 @@ import FederationPage from '@/components/pages/FederationPage';
 import AdminPage from '@/components/pages/AdminPage';
 import TrendingPage from '@/components/pages/TrendingPage';
 import HashtagPage from '@/components/pages/HashtagPage';
+import AppBottomNav from '@/components/ui/AppBottomNav';
 import { userApi, healthApi } from '@/lib/api';
 
 export default function App() {
@@ -215,6 +216,10 @@ export default function App() {
       {currentPage === 'admin' && <AdminPage {...sharedProps} />}
       {currentPage === 'trending' && <TrendingPage {...sharedProps} />}
       {currentPage === 'hashtag' && <HashtagPage {...sharedProps} hashtag={selectedHashtag} />}
+
+      {isAuthenticated && (
+        <AppBottomNav currentPage={currentPage} onNavigate={navigateTo} />
+      )}
     </div>
   );
 }
