@@ -460,6 +460,24 @@ export const postApi = {
       body: JSON.stringify({ post_id: postId, content, parent_id: parentId || null })
     });
     return handleResponse<any>(response);
+  },
+
+  async reportPost(postId: string, reason: string) {
+    const response = await fetch(`${apiBase()}/posts/${postId}/report`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ reason })
+    });
+    return handleResponse<{ message: string; report_id: string }>(response);
+  },
+
+  async submitAppeal(postId: string, reason: string) {
+    const response = await fetch(`${apiBase()}/posts/${postId}/appeal`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ reason })
+    });
+    return handleResponse<{ message: string; appeal_id: string }>(response);
   }
 };
 
@@ -568,23 +586,6 @@ export const interactionApi = {
     return handleResponse<any[]>(response);
   },
 
-  async reportPost(postId: string, reason: string) {
-    const response = await fetch(`${apiBase()}/posts/${postId}/report`, {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      body: JSON.stringify({ reason })
-    });
-    return handleResponse<{ message: string; report_id: string }>(response);
-  },
-
-  async submitAppeal(postId: string, reason: string) {
-    const response = await fetch(`${apiBase()}/posts/${postId}/appeal`, {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      body: JSON.stringify({ reason })
-    });
-    return handleResponse<{ message: string; appeal_id: string }>(response);
-  }
 };
 
 // Health check
