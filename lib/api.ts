@@ -463,6 +463,7 @@ export const postApi = {
   },
 
   async reportPost(postId: string, reason: string) {
+    // Report a post for moderation
     const response = await fetch(`${apiBase()}/posts/${postId}/report`, {
       method: 'POST',
       headers: getAuthHeaders(),

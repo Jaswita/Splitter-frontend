@@ -20,7 +20,7 @@ export default function HashtagPage({ hashtag, onNavigate }) {
       setError(null);
       const data = await hashtagApi.getPostsByHashtag(hashtag, 50, 0);
       setPosts(data.posts || []);
-      setTotalCount(data.count || 0);
+      setTotalCount(data.count ?? (data.posts || []).length);
     } catch (err) {
       console.error('Failed to fetch posts for hashtag:', err);
       setError('Failed to load posts');

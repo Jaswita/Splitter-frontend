@@ -39,7 +39,7 @@ export default function TrendingPage({ onNavigate }) {
           ← Back
         </button>
         <h1>🔥 Trending Hashtags</h1>
-        <p className="trending-subtitle">Most popular hashtags in the last 24 hours</p>
+        <p className="trending-subtitle">Most popular hashtags across all posts</p>
       </div>
 
       {loading && (
