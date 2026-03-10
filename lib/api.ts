@@ -985,6 +985,22 @@ export const federationApi = {
       `${apiBase()}/federation/public-users?limit=${limit}`
     );
     return handleResponse<{ users: any[]; total: number; domain: string }>(response);
+  },
+
+  // Get peer health status
+  async getHealth() {
+    const response = await fetch(
+      `${apiBase()}/federation/health`
+    );
+    return handleResponse<{ self_domain: string; peers: any[] }>(response);
+  },
+
+  // Get user migration status
+  async getMigrations() {
+    const response = await fetch(
+      `${apiBase()}/federation/migrations`
+    );
+    return handleResponse<{ migrations: any[]; total: number }>(response);
   }
 };
 
