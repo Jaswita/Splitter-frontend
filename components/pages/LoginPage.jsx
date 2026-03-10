@@ -86,7 +86,7 @@ export default function LoginPage({ onNavigate, updateUserData, setIsAuthenticat
         displayName: user.display_name || user.username,
         server: user.instance_domain || formData.server,
         avatar: user.avatar_url || '👤',
-        email: user.email || `${user.username}@localhost`,
+        email: user.email || `${user.username}@${user.instance_domain || formData.server}`,
         bio: user.bio || '',
         did: user.did,
         role: user.role || 'user',
@@ -166,7 +166,7 @@ export default function LoginPage({ onNavigate, updateUserData, setIsAuthenticat
         displayName: user.display_name || user.username,
         server: user.instance_domain || formData.server,
         avatar: user.avatar_url || '👤',
-        email: user.email || `${user.username}@localhost`,
+        email: user.email || `${user.username}@${user.instance_domain || formData.server}`,
         bio: user.bio || '',
         did: user.did,
         role: user.role || 'user',
@@ -252,8 +252,8 @@ export default function LoginPage({ onNavigate, updateUserData, setIsAuthenticat
               name="server"
               className="form-select"
             >
-              <option value="splitter-1">splitter-1 (localhost:8000)</option>
-              <option value="splitter-2">splitter-2 (localhost:8001)</option>
+              <option value="splitter-1">splitter-1 (Primary)</option>
+              <option value="splitter-2">splitter-2 (Federation)</option>
             </select>
           </div>
         )}

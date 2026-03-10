@@ -95,8 +95,8 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
   const isImageAvatar = (avatar) => typeof avatar === 'string' && (avatar.startsWith('http://') || avatar.startsWith('https://') || avatar.startsWith('/'));
 
   const getOriginForDomain = (domain) => {
-    if (domain === 'splitter-1') return 'http://localhost:8000';
-    if (domain === 'splitter-2') return 'http://localhost:8001';
+    if (domain === 'splitter-1') return 'https://splitter-m0kv.onrender.com';
+    if (domain === 'splitter-2') return 'https://splitter-2.onrender.com';
     const { url } = getCurrentInstance();
     return new URL(url).origin;
   };
@@ -134,9 +134,9 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
         if (!username && pathParts.length > 0) {
           username = pathParts[pathParts.length - 1] || '';
         }
-        if (parsed.host.includes('localhost:8001')) {
+        if (parsed.host.includes('localhost:8001') || parsed.host.includes('splitter-2.onrender.com')) {
           domain = 'splitter-2';
-        } else if (parsed.host.includes('localhost:8000')) {
+        } else if (parsed.host.includes('localhost:8000') || parsed.host.includes('splitter-m0kv.onrender.com')) {
           domain = 'splitter-1';
         } else if (!post.domain) {
           domain = parsed.hostname || domain;
@@ -405,7 +405,7 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
                 const fedResult = await federationApi.getTimeline(100);
                 const followedRemotePosts = (fedResult.posts || []).filter(p => {
                   if (!p.is_remote) return false;
-                  const domain = p.domain || (typeof p.author_did === 'string' && p.author_did.includes('localhost:8001') ? 'splitter-2' : p.author_did?.includes('localhost:8000') ? 'splitter-1' : '');
+                  const domain = p.domain || (typeof p.author_did === 'string' && (p.author_did.includes('localhost:8001') || p.author_did.includes('splitter-2.onrender.com')) ? 'splitter-2' : (p.author_did?.includes('localhost:8000') || p.author_did?.includes('splitter-m0kv.onrender.com')) ? 'splitter-1' : '');
                   const handle = `${p.username || ''}@${domain}`.toLowerCase();
                   return followedHandles.has(handle);
                 });
@@ -1088,7 +1088,7 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
             <div className="sidebar-info">
               <div className="info-item">
                 <span className="info-label">Server</span>
-                <span className="info-value">{userData.server || userData.instance_domain || 'localhost'}</span>
+                <span className="info-value">{userData.server || userData.instance_domain || 'splitter-1'}</span>
               </div>
               <div className="info-item">
                 <span className="info-label">Your Role</span>
@@ -1572,7 +1572,7 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
         {/* Right Sidebar */}
         <aside className="home-trends">
           <div className="trends-section">
-            <h3 className="trends-title">🔥 Trending Topics</h3>
+            <h3 className="trends-title">Trending Now</h3>
             <div className="trends-list">
               {trendingHashtags.length > 0 ? (
                 trendingHashtags.map((ht) => (

@@ -30,7 +30,7 @@ export default function App() {
     bio: '',
     avatar: '👤',
     email: '',
-    server: 'localhost',
+    server: 'splitter-1',
     did: '',
     role: 'user',
     moderation_requested: false,
@@ -62,8 +62,8 @@ export default function App() {
               displayName: user.display_name || user.username || '',
               bio: user.bio || '',
               avatar: user.avatar_url || '👤',
-              email: `${user.username}@${user.instance_domain || 'localhost'}`,
-              server: user.instance_domain || 'localhost',
+              email: `${user.username}@${user.instance_domain || 'splitter-1'}`,
+              server: user.instance_domain || 'splitter-1',
               did: user.did || '',
               role: user.role || 'user',
               moderation_requested: user.moderation_requested || false,
@@ -153,7 +153,7 @@ export default function App() {
       bio: '',
       avatar: '👤',
       email: '',
-      server: 'localhost',
+      server: 'splitter-1',
       did: '',
       role: 'user',
       moderation_requested: false,
@@ -196,7 +196,7 @@ export default function App() {
           textAlign: 'center',
           fontSize: '14px'
         }}>
-          ⚠️ Backend not connected. Please ensure the server is running at localhost:8000
+          ⚠️ Backend not connected. Please check your internet connection or try again later.
         </div>
       )}
       {currentPage === 'landing' && <LandingPage {...sharedProps} />}

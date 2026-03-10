@@ -17,11 +17,11 @@ const SERVERS = [
     federation: 'Open',
     moderation: 'Moderate',
     reputation: 'trusted',
-    description: 'Primary Splitter instance — your main server for testing',
-    region: 'Local',
-    location: 'localhost:8000',
+    description: 'Primary Splitter instance — your main server',
+    region: 'Cloud',
+    location: 'splitter-m0kv.onrender.com',
     uptime: '100%',
-    ping: '1ms'
+    ping: '~1s'
   },
   {
     id: 2,
@@ -31,18 +31,18 @@ const SERVERS = [
     federation: 'Open',
     moderation: 'Moderate',
     reputation: 'trusted',
-    description: 'Second Splitter instance for federation testing — separate database',
-    region: 'Local',
-    location: 'localhost:8001',
+    description: 'Second Splitter instance for federation — separate database',
+    region: 'Cloud',
+    location: 'splitter-2.onrender.com',
     uptime: '100%',
-    ping: '1ms'
+    ping: '~1s'
   }
 ];
 
-const REGIONS = ['All', 'Local'];
+const REGIONS = ['All', 'Cloud'];
 const SERVER_DISCOVERY_URLS = {
-  'splitter-1': 'http://localhost:8000/api/v1/federation/public-users?limit=1',
-  'splitter-2': 'http://localhost:8001/api/v1/federation/public-users?limit=1'
+  'splitter-1': 'https://splitter-m0kv.onrender.com/api/v1/federation/public-users?limit=1',
+  'splitter-2': 'https://splitter-2.onrender.com/api/v1/federation/public-users?limit=1'
 };
 
 export default function SignupPage({ onNavigate, updateUserData, setIsAuthenticated }) {

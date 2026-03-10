@@ -81,7 +81,7 @@ export default function ProfilePage({ onNavigate, userData, updateUserData, view
           profile = await userApi.getUserProfile(viewingUserId);
           setProfileData({
             username: profile.username,
-            server: profile.instance_domain || 'localhost:8000',
+            server: profile.instance_domain || 'splitter-1',
             displayName: profile.display_name || profile.username,
             avatar: profile.avatar_url || '👤',
             bio: profile.bio || 'No bio yet',
@@ -185,7 +185,7 @@ export default function ProfilePage({ onNavigate, userData, updateUserData, view
 
       const nextProfile = {
         username: finalUser.username,
-        server: finalUser.instance_domain || 'localhost:8000',
+        server: finalUser.instance_domain || 'splitter-1',
         displayName: finalUser.display_name || finalUser.username,
         avatar: finalUser.avatar_url || '👤',
         bio: finalUser.bio || '',
@@ -216,7 +216,7 @@ export default function ProfilePage({ onNavigate, userData, updateUserData, view
   const displayData = profileData || userData;
   const profile = {
     username: displayData?.username || 'unknown',
-    server: displayData?.server || 'localhost:8000',
+    server: displayData?.server || 'splitter-1',
     displayName: displayData?.displayName || displayData?.display_name || displayData?.username || 'Unknown User',
     did: displayData?.did || 'did:key:...',
     avatar: displayData?.avatar || '👤',

@@ -72,7 +72,7 @@ export default function HashtagPage({ hashtag, onNavigate }) {
         <h1>#{hashtag}</h1>
         {!loading && <p className="hashtag-count">{totalCount} post{totalCount !== 1 ? 's' : ''}</p>}
         <button className="hashtag-trending-link" onClick={() => onNavigate('trending')}>
-          🔥 View All Trending
+          View All Trending
         </button>
       </div>
 
