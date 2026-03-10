@@ -1536,13 +1536,13 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
                       <button
                         className="post-action"
                         title="More options"
-                        onClick={() => setReportMenuPostId(reportMenuPostId === post.id ? null : post.id)}
+                        onClick={(e) => { e.stopPropagation(); setReportMenuPostId(reportMenuPostId === post.id ? null : post.id); }}
                         style={{ padding: '4px 8px', fontSize: '18px', letterSpacing: '2px' }}
                       >
                         &#8943;
                       </button>
                       {reportMenuPostId === post.id && (
-                        <div style={{
+                        <div onClick={(e) => e.stopPropagation()} style={{
                           position: 'absolute', right: 0, top: '100%', zIndex: 100,
                           background: 'var(--bg-secondary, #1a1a2e)',
                           border: '1px solid var(--border-color, #333)',
