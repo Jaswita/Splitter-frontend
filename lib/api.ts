@@ -566,6 +566,24 @@ export const interactionApi = {
       headers: getAuthHeaders()
     });
     return handleResponse<any[]>(response);
+  },
+
+  async reportPost(postId: string, reason: string) {
+    const response = await fetch(`${apiBase()}/posts/${postId}/report`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ reason })
+    });
+    return handleResponse<{ message: string; report_id: string }>(response);
+  },
+
+  async submitAppeal(postId: string, reason: string) {
+    const response = await fetch(`${apiBase()}/posts/${postId}/appeal`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ reason })
+    });
+    return handleResponse<{ message: string; appeal_id: string }>(response);
   }
 };
 
@@ -888,6 +906,38 @@ export const adminApi = {
         last_seen: string;
       }>;
     }>(response);
+  },
+
+  async getAIActions() {
+    const response = await fetch(`${apiBase()}/admin/ai-actions`, {
+      headers: getAuthHeaders()
+    });
+    return handleResponse<{ items: any[]; total: number }>(response);
+  },
+
+  async getAppeals() {
+    const response = await fetch(`${apiBase()}/admin/appeals`, {
+      headers: getAuthHeaders()
+    });
+    return handleResponse<{ appeals: any[]; total: number }>(response);
+  },
+
+  async resolveAppeal(appealId: string, decision: 'accept' | 'reject', note?: string) {
+    const response = await fetch(`${apiBase()}/admin/appeals/${appealId}/resolve`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ decision, note: note || '' })
+    });
+    return handleResponse<{ message: string }>(response);
+  },
+
+  async banUser(userId: string, reason?: string) {
+    const response = await fetch(`${apiBase()}/admin/users/${userId}/ban`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ reason: reason || '' })
+    });
+    return handleResponse<{ message: string }>(response);
   }
 };
 

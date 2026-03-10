@@ -85,6 +85,13 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
   const [editText, setEditText] = useState('');
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
 
+  // Report / appeal state
+  const [reportMenuPostId, setReportMenuPostId] = useState(null);
+  const [reportModalPostId, setReportModalPostId] = useState(null);
+  const [reportReason, setReportReason] = useState('');
+  const [reportSubmitting, setReportSubmitting] = useState(false);
+  const [reportSuccess, setReportSuccess] = useState('');
+
   const isImageAvatar = (avatar) => typeof avatar === 'string' && (avatar.startsWith('http://') || avatar.startsWith('https://') || avatar.startsWith('/'));
 
   const getOriginForDomain = (domain) => {
@@ -687,16 +694,30 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
       post.author?.startsWith(userData?.username);
   };
 
+  const handleReportSubmit = async () => {
+    if (!reportModalPostId || !reportReason) return;
+    setReportSubmitting(true);
+    try {
+      await postApi.reportPost(reportModalPostId, reportReason);
+      setReportSuccess('Report submitted. Our AI moderation system will review it shortly.');
+      setTimeout(() => { setReportModalPostId(null); setReportSuccess(''); }, 3000);
+    } catch (err) {
+      setReportSuccess('Failed to submit report: ' + (err.message || 'Unknown error'));
+    } finally {
+      setReportSubmitting(false);
+    }
+  };
+
   const getVisibilityIcon = (visibility) => {
     switch (visibility) {
-      case 'followers': return '👥';
-      case 'circle': return '🔒';
-      default: return '🌐';
+      case 'followers': return '(followers)';
+      case 'circle': return '(circle)';
+      default: return '(public)';
     }
   };
 
   return (
-    <div className="home-container">
+    <div className="home-container" onClick={() => setReportMenuPostId(null)}>
       {/* Walkthrough */}
       <HomePageWalkthrough />
 
@@ -1511,9 +1532,36 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
                   )}
 
                   {!isOwnPost(post) && (
-                    <button className="post-action post-action-delete">
-                      <span className="action-icon">⋯</span>
-                    </button>
+                    <div style={{ position: 'relative', marginLeft: 'auto' }}>
+                      <button
+                        className="post-action"
+                        title="More options"
+                        onClick={() => setReportMenuPostId(reportMenuPostId === post.id ? null : post.id)}
+                        style={{ padding: '4px 8px', fontSize: '18px', letterSpacing: '2px' }}
+                      >
+                        &#8943;
+                      </button>
+                      {reportMenuPostId === post.id && (
+                        <div style={{
+                          position: 'absolute', right: 0, top: '100%', zIndex: 100,
+                          background: 'var(--bg-secondary, #1a1a2e)',
+                          border: '1px solid var(--border-color, #333)',
+                          borderRadius: '8px', minWidth: '160px',
+                          boxShadow: '0 4px 16px rgba(0,0,0,0.4)'
+                        }}>
+                          <button
+                            onClick={() => { setReportModalPostId(post.id); setReportMenuPostId(null); setReportReason(''); setReportSuccess(''); }}
+                            style={{
+                              display: 'block', width: '100%', padding: '10px 16px',
+                              textAlign: 'left', background: 'none', border: 'none',
+                              color: '#ff8080', cursor: 'pointer', fontSize: '14px'
+                            }}
+                          >
+                            Flag this post
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
               </article>
@@ -1691,6 +1739,75 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
 
         </aside>
       </div>
+
+      {/* Report Post Modal */}
+      {reportModalPostId && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, zIndex: 2000,
+            background: 'rgba(0,0,0,0.6)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center'
+          }}
+          onClick={() => !reportSubmitting && setReportModalPostId(null)}
+        >
+          <div
+            style={{
+              background: 'var(--bg-secondary, #1a1a2e)',
+              border: '1px solid var(--border-color, #333)',
+              borderRadius: '12px', padding: '28px 32px',
+              maxWidth: '400px', width: '90%',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.5)'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ margin: '0 0 8px', color: 'var(--text-primary, #fff)', fontSize: '18px' }}>
+              Flag this post
+            </h3>
+            <p style={{ margin: '0 0 20px', color: '#888', fontSize: '13px' }}>
+              Select a reason. Our AI will screen the post immediately.
+            </p>
+
+            {reportSuccess ? (
+              <p style={{ color: reportSuccess.startsWith('Failed') ? '#ff8080' : '#00ff88', fontSize: '14px', textAlign: 'center', padding: '12px 0' }}>
+                {reportSuccess}
+              </p>
+            ) : (
+              <>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px' }}>
+                  {['spam', 'harassment', 'inappropriate', 'hate_speech', 'misinformation'].map((r) => (
+                    <label key={r} style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', padding: '8px 12px', borderRadius: '6px', border: `1px solid ${reportReason === r ? '#00d9ff' : 'transparent'}`, background: reportReason === r ? 'rgba(0,217,255,0.08)' : 'transparent', color: 'var(--text-primary, #ccc)', fontSize: '14px' }}>
+                      <input
+                        type="radio"
+                        name="reportReason"
+                        value={r}
+                        checked={reportReason === r}
+                        onChange={() => setReportReason(r)}
+                        style={{ accentColor: '#00d9ff' }}
+                      />
+                      {r.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}
+                    </label>
+                  ))}
+                </div>
+                <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                  <button
+                    onClick={() => setReportModalPostId(null)}
+                    style={{ padding: '8px 18px', background: 'transparent', border: '1px solid #555', color: '#aaa', borderRadius: '6px', cursor: 'pointer', fontSize: '14px' }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleReportSubmit}
+                    disabled={!reportReason || reportSubmitting}
+                    style={{ padding: '8px 18px', background: reportReason && !reportSubmitting ? 'rgba(255,68,68,0.2)' : '#333', border: '1px solid #ff4444', color: '#ff8080', borderRadius: '6px', cursor: reportReason && !reportSubmitting ? 'pointer' : 'not-allowed', fontSize: '14px', fontWeight: '600' }}
+                  >
+                    {reportSubmitting ? 'Submitting...' : 'Submit Report'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
