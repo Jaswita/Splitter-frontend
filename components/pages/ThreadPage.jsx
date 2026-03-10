@@ -130,7 +130,7 @@ const ReplyItem = ({
   );
 };
 
-export default function ThreadPage({ onNavigate, postId, userData }) {
+export default function ThreadPage({ onNavigate, postId, postData, userData }) {
   const { theme, toggleTheme } = useTheme();
   const isDarkMode = theme === 'dark';
 
@@ -164,6 +164,28 @@ export default function ThreadPage({ onNavigate, postId, userData }) {
   }, [postId]);
 
   const loadThreadData = async () => {
+    // If we have pre-loaded post data (remote post from federated timeline), use it directly
+    if (postData) {
+      setPost({
+        id: postData.id,
+        content: postData.content,
+        username: postData.handle?.replace('@', '') || postData.displayName || 'remote-user',
+        display_name: postData.displayName,
+        avatar_url: postData.avatar,
+        created_at: postData.createdAt,
+        image_url: postData.imageUrl,
+        like_count: postData.likes || 0,
+        repost_count: postData.boosts || 0,
+        total_reply_count: postData.replies || 0,
+        is_remote: true,
+        domain: postData.domain,
+        instance_url: postData.instanceUrl,
+      });
+      setRepliesTree([]);
+      setIsLoading(false);
+      return;
+    }
+
     if (!navigator.onLine) {
       const cached = localStorage.getItem(`thread_cache_${postId}`);
       if (cached) {
@@ -176,15 +198,15 @@ export default function ThreadPage({ onNavigate, postId, userData }) {
     }
     setIsLoading(true);
     try {
-      const postData = await postApi.getPost(postId);
-      setPost(postData);
+      const postResult = await postApi.getPost(postId);
+      setPost(postResult);
 
       const replies = await postApi.getReplies(postId);
       setRepliesTree(buildReplyTree(replies));
       localStorage.setItem(
         `thread_cache_${postId}`,
         JSON.stringify({
-          post: postData,
+          post: postResult,
           replies: replies
         })
       );
@@ -320,7 +342,17 @@ export default function ThreadPage({ onNavigate, postId, userData }) {
 
               {post.image_url && (
                 <div className="root-post-image">
-                  <img src={post.image_url} alt="Post attachment" />
+                  <img src={
+                    post.image_url.startsWith('http') ? post.image_url
+                      : post.instance_url ? `${post.instance_url}${post.image_url}`
+                      : post.image_url
+                  } alt="Post attachment" />
+                </div>
+              )}
+
+              {post.is_remote && post.domain && (
+                <div style={{ fontSize: '12px', color: '#888', marginTop: '8px' }}>
+                  📡 Remote post from {post.domain}
                 </div>
               )}
 
@@ -329,8 +361,8 @@ export default function ThreadPage({ onNavigate, postId, userData }) {
               </div>
             </div>
 
-            {/* Reply Composer - right under the post */}
-            {userData?.id && (
+            {/* Reply Composer - right under the post (only for local posts) */}
+            {userData?.id && !post.is_remote && (
               <div className="main-reply-composer">
                 <div className="composer-avatar">
                   {getInitials(userData.username)}

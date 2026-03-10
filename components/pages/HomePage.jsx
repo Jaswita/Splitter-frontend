@@ -78,6 +78,16 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
   const [trendingHashtags, setTrendingHashtags] = useState([]);
   const [followingUsers, setFollowingUsers] = useState(new Set());
   const [followLoading, setFollowLoading] = useState(new Set());
+
+  // Helper: check if a user is followed (supports both local ID and remote username@domain)
+  const isUserFollowed = (user) => {
+    if (!user) return false;
+    if (followingUsers.has(user.id)) return true;
+    if (user.is_remote && user.username && user.domain) {
+      return followingUsers.has(`${user.username}@${user.domain}`);
+    }
+    return false;
+  };
   const [isOffline, setIsOffline] = useState(false);
 
   // Edit/Delete state
@@ -191,10 +201,16 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
         const { followApi } = await import('@/lib/api');
         const following = await followApi.getFollowing(userData.id);
 
-        // Create a Set of user IDs that the current user is following
-        const followingIds = new Set(
-          (following || []).map(user => user.id)
-        );
+        // Create a Set of user IDs and username@domain keys for following
+        // This handles both local users (by ID) and remote ghost users (by username@domain)
+        const followingIds = new Set();
+        (following || []).forEach(user => {
+          followingIds.add(user.id);
+          // Also add username@domain key for remote user matching
+          if (user.username && user.instance_domain) {
+            followingIds.add(`${user.username}@${user.instance_domain}`);
+          }
+        });
         setFollowingUsers(followingIds);
         console.log('Loaded following list:', followingIds);
 
@@ -322,7 +338,9 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
   // Follow/Unfollow user (handles both local and remote users)
   const handleFollowToggle = async (userId, user = null) => {
     console.log('Follow toggle called for userId:', userId, 'user:', user);
-    const isFollowing = followingUsers.has(userId);
+    const isFollowing = isUserFollowed(user || { id: userId });
+    const remoteKey = user?.is_remote && user?.username && user?.domain
+      ? `${user.username}@${user.domain}` : null;
 
     // Add to loading set
     setFollowLoading(prev => new Set(prev).add(userId));
@@ -336,6 +354,7 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
         setFollowingUsers(prev => {
           const next = new Set(prev);
           next.delete(userId);
+          if (remoteKey) next.delete(remoteKey);
           return next;
         });
       } else {
@@ -347,7 +366,11 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
           console.log('Following local user:', userId);
           await followApi.followUser(userId);
         }
-        setFollowingUsers(prev => new Set(prev).add(userId));
+        setFollowingUsers(prev => {
+          const next = new Set(prev).add(userId);
+          if (remoteKey) next.add(remoteKey);
+          return next;
+        });
       }
       console.log('Follow operation successful');
     } catch (err) {
@@ -458,6 +481,7 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
             local: post.is_remote !== undefined ? !post.is_remote : (post.is_local !== undefined ? post.is_local : true),
             isRemote: post.is_remote || false,
             domain: derivedDomain,
+            instanceUrl: post.instance_url || null,
             visibility: post.visibility || 'public',
             expiresAt: post.expires_at || null,
             liked: post.liked || false,
@@ -921,9 +945,9 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
                               disabled={followLoading.has(user.id)}
                               style={{
                                 padding: '6px 16px',
-                                background: followingUsers.has(user.id) ? 'rgba(0,255,136,0.2)' : 'rgba(0,217,255,0.2)',
-                                border: `1px solid ${followingUsers.has(user.id) ? '#00ff88' : '#00d9ff'}`,
-                                color: followingUsers.has(user.id) ? '#00ff88' : '#00d9ff',
+                                background: isUserFollowed(user) ? 'rgba(0,255,136,0.2)' : 'rgba(0,217,255,0.2)',
+                                border: `1px solid ${isUserFollowed(user) ? '#00ff88' : '#00d9ff'}`,
+                                color: isUserFollowed(user) ? '#00ff88' : '#00d9ff',
                                 borderRadius: '4px',
                                 cursor: followLoading.has(user.id) ? 'not-allowed' : 'pointer',
                                 fontSize: '12px',
@@ -931,7 +955,7 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
                                 opacity: followLoading.has(user.id) ? 0.6 : 1
                               }}
                             >
-                              {followLoading.has(user.id) ? '...' : followingUsers.has(user.id) ? '✓ Following' : 'Follow'}
+                              {followLoading.has(user.id) ? '...' : isUserFollowed(user) ? '✓ Following' : 'Follow'}
                             </button>
                             <button
                               onClick={(e) => {
@@ -1311,7 +1335,7 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
             {dedupePosts(posts).map((post, idx) => (
               <article key={`${post.id}-${post.authorId || post.author_did || 'author'}-${post.createdAt || idx}-${idx}`} className={`post ${post.local ? 'local' : 'remote'}`}>
                 <div className="post-header">
-                  <div className="post-author" style={{ cursor: 'pointer' }} onClick={() => onNavigate('thread', { postId: post.id })}>
+                  <div className="post-author" style={{ cursor: 'pointer' }} onClick={() => onNavigate('thread', { postId: post.id, postData: post.instanceUrl ? post : undefined })}>
                     <span className="post-avatar">
                       {isImageAvatar(post.avatar) ? (
                         <img src={resolveAssetURL(post.avatar, post.domain)} alt="Post author avatar" className="avatar-image-fill" />
@@ -1411,7 +1435,7 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
                   <div
                     className="post-content"
                     style={{ cursor: 'pointer' }}
-                    onClick={() => onNavigate('thread', { postId: post.id })}
+                    onClick={() => onNavigate('thread', { postId: post.id, postData: post.instanceUrl ? post : undefined })}
                   >
                     {post.content}
                     {post.imageUrl && (
@@ -1480,7 +1504,7 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
                 <div className="post-actions">
                   <button
                     className="post-action"
-                    onClick={() => onNavigate('thread', { postId: post.id })}
+                    onClick={() => onNavigate('thread', { postId: post.id, postData: post.instanceUrl ? post : undefined })}
                     title="Reply to this post"
                   >
                     <span className="action-icon">💬</span>
