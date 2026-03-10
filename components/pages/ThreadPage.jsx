@@ -218,6 +218,9 @@ export default function ThreadPage({ onNavigate, postId, postData, userData }) {
   };
 
   const buildReplyTree = (flatReplies = []) => {
+    if (!flatReplies || !Array.isArray(flatReplies)) {
+      flatReplies = [];
+    }
     const map = {};
     const roots = [];
 

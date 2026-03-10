@@ -190,7 +190,7 @@ export default function App() {
   }
 
   return (
-    <div className={`min-h-screen bg-background text-foreground`}>
+    <div className={`min-h-screen bg-background text-foreground ${isAuthenticated ? 'pb-[70px] md:pb-0' : ''}`}>
       {!backendConnected && currentPage !== 'landing' && (
         <div style={{
           background: '#ff4444',
