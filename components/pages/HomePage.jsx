@@ -1512,7 +1512,7 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
                     onClick={() => onNavigate('thread', { postId: post.id, postData: post.instanceUrl ? post : undefined })}
                     title="Reply to this post"
                   >
-                    <span className="action-icon">💬</span>
+                    <span className="action-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{width:'18px',height:'18px'}}><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/></svg></span>
                     <span className="action-count">{post.replies}</span>
                   </button>
                   <button
@@ -1522,7 +1522,7 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
                     style={post.reposted ? { color: '#00d9ff' } : {}}
                     title={post.reposted ? 'Undo repost' : 'Repost to your followers'}
                   >
-                    <span className="action-icon">🚀</span>
+                    <span className="action-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{width:'18px',height:'18px'}}><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></span>
                     <span className="action-count">{post.boosts}</span>
                   </button>
                   <button
@@ -1532,7 +1532,7 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
                     style={post.liked ? { color: '#ff4444' } : {}}
                     title={post.liked ? 'Unlike' : 'Like this post'}
                   >
-                    <span className="action-icon">{post.liked ? '❤️' : '🤍'}</span>
+                    <span className="action-icon"><svg viewBox="0 0 24 24" fill={post.liked ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{width:'18px',height:'18px'}}><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 1 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg></span>
                     <span className="action-count">{post.likes}</span>
                   </button>
 
