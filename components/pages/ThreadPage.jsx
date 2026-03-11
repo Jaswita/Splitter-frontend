@@ -181,7 +181,14 @@ export default function ThreadPage({ onNavigate, postId, postData, userData }) {
         domain: postData.domain,
         instance_url: postData.instanceUrl,
       });
-      setRepliesTree([]);
+
+      // Try to load local replies for this remote post (it's cached locally)
+      try {
+        const replies = await postApi.getReplies(postData.id);
+        setRepliesTree(buildReplyTree(replies));
+      } catch {
+        setRepliesTree([]);
+      }
       setIsLoading(false);
       return;
     }
@@ -364,8 +371,8 @@ export default function ThreadPage({ onNavigate, postId, postData, userData }) {
               </div>
             </div>
 
-            {/* Reply Composer - right under the post (only for local posts) */}
-            {userData?.id && !post.is_remote && (
+            {/* Reply Composer - right under the post */}
+            {userData?.id && (
               <div className="main-reply-composer">
                 <div className="composer-avatar">
                   {getInitials(userData.username)}
