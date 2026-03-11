@@ -1,38 +1,66 @@
-'use client';
-
 import DOMPurify from 'isomorphic-dompurify';
 
 export default function SafeHTMLDisplay({ html, className = '', onHashtagClick = null }) {
+  const [cleanHtml, setCleanHtml] = useState('');
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+
+    // Only import and use DOMPurify on the client side
+    const initSanitize = async () => {
+      if (!html) return;
+
+      try {
+        const DOMPurify = (await import('dompurify')).default;
+
+        const sanitized = DOMPurify.sanitize(html, {
+          ALLOWED_TAGS: [
+            'b', 'i', 'em', 'strong', 'a', 'p', 'br', 'ul', 'ol', 'li',
+            'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'code',
+            'pre', 'span', 'div'
+          ],
+          ALLOWED_ATTR: ['href', 'target', 'rel', 'class', 'style']
+        });
+
+        setCleanHtml(sanitized);
+      } catch (err) {
+        console.error('Sanitization failed:', err);
+        // Fallback to plain text if sanitization fails
+        setCleanHtml(html.replace(/<[^>]*>?/gm, ''));
+      }
+    };
+
+    initSanitize();
+  }, [html]);
+
   if (!html) return null;
 
-  // 1. Convert plain text hashtags to clickable spans within the text before sanitization
-  // We only replace #tags that aren't already inside an HTML attribute
-  let processedHtml = html;
-  
-  if (onHashtagClick) {
-    // This simple regex looks for # followed by alnum, but isn't perfect for HTML attributes
-    // To be safe and simple, we'll let the parser handle it, or we do a basic replace:
-    // Actually, handling hashtag clicks inside dangerouslySetInnerHTML is tricky 
-    // because React won't attach onClick to raw HTML strings.
-    // Instead, we will wrap the clean HTML and use event delegation.
+  // On the server or before hydration, render a placeholder or the content without risky attributes
+  // For absolute safety during SSR, we can render nothing or a safe version.
+  if (!isMounted) {
+    return (
+      <div
+        className={`safe-html-content loading ${className}`}
+        style={{ opacity: 0.5 }}
+      >
+        {/* Strip tags for the initial SSR render to be safe */}
+        {html.replace(/<[^>]*>?/gm, '')}
+      </div>
+    );
   }
 
-  // 2. Sanitize the HTML
-  const cleanHtml = DOMPurify.sanitize(processedHtml, {
-    ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a', 'p', 'br', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'code', 'pre', 'span', 'div'],
-    ALLOWED_ATTR: ['href', 'target', 'rel', 'class', 'style']
-  });
-
   return (
-    <div 
+    <div
       className={`safe-html-content ${className}`}
       dangerouslySetInnerHTML={{ __html: cleanHtml }}
       onClick={(e) => {
         // Event delegation for hashtag clicks
-        if (onHashtagClick && e.target.tagName === 'SPAN' && e.target.classList.contains('hashtag-link')) {
+        const target = e.target;
+        if (onHashtagClick && target.tagName === 'SPAN' && target.classList.contains('hashtag-link')) {
           e.preventDefault();
           e.stopPropagation();
-          const tag = e.target.innerText.replace('#', '');
+          const tag = target.innerText.replace('#', '');
           onHashtagClick(tag);
         }
       }}

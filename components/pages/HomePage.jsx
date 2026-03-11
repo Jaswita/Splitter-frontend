@@ -5,6 +5,7 @@ import '../styles/HomePage.css';
 import HomePageWalkthrough from '@/components/ui/HomePageWalkthrough';
 import StoriesBar from '@/components/ui/StoriesBar';
 import SafeHTMLDisplay from '@/components/ui/SafeHTMLDisplay';
+import { postApi, authApi, userApi, healthApi, messageApi, federationApi, hashtagApi, followApi, getCurrentInstance } from '@/lib/api';
 
 // Sample posts for demo when no backend posts available
 const SAMPLE_POSTS = [
