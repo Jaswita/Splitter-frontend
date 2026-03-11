@@ -5,6 +5,7 @@ import '../styles/HomePage.css';
 import HomePageWalkthrough from '@/components/ui/HomePageWalkthrough';
 import StoriesBar from '@/components/ui/StoriesBar';
 import SafeHTMLDisplay from '@/components/ui/SafeHTMLDisplay';
+import LockIcon from '@/components/ui/LockIcon';
 import { postApi, authApi, userApi, healthApi, messageApi, federationApi, hashtagApi, followApi, searchApi, getCurrentInstance } from '@/lib/api';
 
 // Sample posts for demo when no backend posts available
@@ -502,7 +503,7 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
         const instanceInfo = getCurrentInstance();
         const transformedPosts = feedPosts.map(post => {
           const identity = parseRemoteIdentity(post, instanceInfo.domain);
-          const derivedDomain = identity.domain || instanceInfo.domain;
+          let derivedDomain = identity.domain || instanceInfo.domain;
           // For remote posts with a plain UUID author_did, don't use it as username
           const didLooksLikeUrl = post.author_did?.startsWith('http');
           const derivedUsername = identity.username ||
@@ -510,9 +511,13 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
             post.display_name?.toLowerCase().replace(/\s+/g, '_') ||
             'user';
 
+          // Hide domain if it's the exact same as username (UUID bug) or if it's the current instance
+          const isActuallyRemote = post.is_remote && derivedDomain && derivedDomain !== instanceInfo.domain && derivedDomain !== derivedUsername;
+          const authorFull = isActuallyRemote ? `${derivedUsername}@${derivedDomain}` : `${derivedUsername}`;
+
           return {
             id: post.id,
-            author: `${derivedUsername}@${derivedDomain}`,
+            author: authorFull,
             authorId: post.author_id || post.user_id,
             avatar: post.avatar_url || '👤',
             displayName: post.display_name || derivedUsername || 'Unknown',
@@ -527,6 +532,7 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
             local: post.is_remote !== undefined ? !post.is_remote : (post.is_local !== undefined ? post.is_local : true),
             isRemote: post.is_remote || false,
             domain: derivedDomain,
+            showDomain: isActuallyRemote,
             instanceUrl: post.instance_url || null,
             visibility: post.visibility || 'public',
             expiresAt: post.expires_at || null,
@@ -551,19 +557,11 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
           JSON.stringify(filteredPosts)
         );
       } else {
-        if (activeTab === 'home') {
-          setPosts(SAMPLE_POSTS);
-        } else {
-          setPosts([]);
-        }
+        setPosts([]);
       }
     } catch (err) {
       console.error('Failed to fetch posts:', err);
-      if (activeTab === 'home') {
-        setPosts(SAMPLE_POSTS);
-      } else {
-        setPosts([]);
-      }
+      setPosts([]);
     } finally {
       setIsLoading(false);
     }
@@ -1115,7 +1113,7 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
                 style={{ textAlign: 'left', width: '100%', position: 'relative' }}
               >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{width:'18px',height:'18px',flexShrink:0}}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                <span>Messages 🔒</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>Messages <LockIcon size={14} /></span>
                 {hasUnreadMessages && (
                   <span style={{
                     position: 'absolute',
@@ -1457,7 +1455,7 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
                         <strong className="post-display-name">{post.displayName}</strong>
                       </div>
                       <div className="post-meta-line">
-                        <span className="post-handle">{post.handle}{post.isRemote && post.domain ? `@${post.domain}` : ''}</span>
+                        <span className="post-handle">{post.handle}{post.showDomain ? `@${post.domain}` : ''}</span>
                         <span className="post-meta-dot">·</span>
                         <span className="post-time">{post.timestamp}</span>
                         {!post.isRemote && <><span className="post-meta-dot">·</span><span className="post-badge local" title="This post is from your local instance">Local</span></>}
