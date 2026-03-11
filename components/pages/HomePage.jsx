@@ -1067,6 +1067,7 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
                 onClick={() => setActiveTab('home')}
                 style={{ textAlign: 'left', width: '100%' }}
               >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{width:'18px',height:'18px',flexShrink:0}}><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
                 <span>Home</span>
               </button>
               <button
@@ -1074,13 +1075,15 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
                 onClick={() => onNavigate('dm')}
                 style={{ textAlign: 'left', width: '100%' }}
               >
-                <span>Messages 🔒</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{width:'18px',height:'18px',flexShrink:0}}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                <span>Messages</span>
               </button>
               <button
                 className="sidebar-link security-btn"
                 onClick={() => onNavigate('security')}
                 style={{ textAlign: 'left', width: '100%' }}
               >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{width:'18px',height:'18px',flexShrink:0}}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                 <span>Security</span>
               </button>
             </div>
@@ -1304,14 +1307,9 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
                     onClick={() => document.getElementById('post-media-input').click()}
                     title="Attach media (max 5MB)"
                     disabled={isPosting || isOffline}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      cursor: 'pointer',
-                      opacity: isPosting ? 0.5 : 1
-                    }}
                   >
-                    🖼️ Media
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{width:'16px',height:'16px',verticalAlign:'middle',marginRight:'4px'}}><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                    Media
                   </button>
                   <button
                     className={`composer-btn-post ${(!newPostText.trim() && !selectedFile) || isPosting || isOffline ? 'disabled' : ''}`}
@@ -1350,22 +1348,24 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
                     </span>
                     <div className="post-meta">
                       <div className="post-name-line">
-                        <strong>{post.displayName}</strong>
+                        <strong className="post-display-name">{post.displayName}</strong>
+                      </div>
+                      <div className="post-meta-line">
                         <span className="post-handle">{post.handle}{post.isRemote && post.domain ? `@${post.domain}` : ''}</span>
-                        {!post.isRemote && <span className="post-badge local" title="This post is from your local instance">Local</span>}
-                        {post.isRemote && <span className="post-badge remote" title={`This post is from ${post.domain || 'a remote instance'}`}>🌐 {post.domain || 'Remote'}</span>}
-                        {/* Edited Badge */}
+                        <span className="post-meta-dot">·</span>
+                        <span className="post-time">{post.timestamp}</span>
+                        {!post.isRemote && <><span className="post-meta-dot">·</span><span className="post-badge local" title="This post is from your local instance">Local</span></>}
+                        {post.isRemote && <><span className="post-meta-dot">·</span><span className="post-badge remote" title={`This post is from ${post.domain || 'a remote instance'}`}>{post.domain || 'Remote'}</span></>}
                         {isEdited(post) && (
-                          <span
+                          <><span className="post-meta-dot">·</span><span
                             className="post-badge"
                             style={{ background: 'rgba(255,170,0,0.2)', color: '#ffaa00' }}
                             title={`Edited: ${new Date(post.updatedAt).toLocaleString()}`}
                           >
-                            ✏️ Edited
-                          </span>
+                            Edited
+                          </span></>
                         )}
                       </div>
-                      <span className="post-time">{post.timestamp}</span>
                       {post.expiresAt && (
                         <span className="post-time" title={`Expires at ${new Date(post.expiresAt).toLocaleString()}`}>
                           ⏳ {formatRemainingLifetime(post.expiresAt)}
