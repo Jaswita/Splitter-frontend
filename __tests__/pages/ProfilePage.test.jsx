@@ -1,33 +1,60 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import ProfilePage from '../../components/pages/ProfilePage';
 
+// Mocking the API calls
+jest.mock('@/lib/api', () => ({
+    followApi: {
+        getFollowers: jest.fn(() => Promise.resolve([{}, {}, {}])),
+        getFollowing: jest.fn(() => Promise.resolve([{}])),
+        unfollowUser: jest.fn()
+    },
+    userApi: {
+        getUserProfile: jest.fn(),
+        updateProfile: jest.fn(),
+        uploadAvatar: jest.fn()
+    },
+    postApi: {
+        getUserPosts: jest.fn(() => Promise.resolve([{}, {}]))
+    },
+    getCurrentInstance: jest.fn(() => ({ url: 'http://localhost:3000' })),
+    resolveMediaUrl: jest.fn(url => url)
+}));
+
+jest.mock('@/components/ui/theme-provider', () => ({
+    useTheme: () => ({ theme: 'dark', toggleTheme: jest.fn() })
+}));
+
 describe('ProfilePage Stats rendering', () => {
-    // Mock user data that mimics the user state 
     const mockUser = {
+        id: '1',
         username: 'alice_crypto',
-        display_name: 'Alice Decent',
-        followers_count: 1420,
-        following_count: 12,
-        posts_count: 55,
+        displayName: 'Alice Decent',
+        avatar: '👤',
         bio: 'Decentralized web enthusiast.',
-        did: 'did:key:z6Mk...'
+        did: 'did:key:alice'
     };
 
     test('1️⃣ Displays accurate user counts and profile metadata', async () => {
         render(<ProfilePage onNavigate={jest.fn()} userData={mockUser} />);
         
-        // Verify names are displayed
-        expect(await screen.findByText('Alice Decent')).toBeInTheDocument();
+        // Wait for profile data to load
+        await waitFor(() => {
+            expect(screen.getByDisplayValue('Alice Decent')).toBeInTheDocument();
+        });
+        
         expect(screen.getByText(/@alice_crypto/i)).toBeInTheDocument();
         
         // Verify stats
-        expect(screen.getByText('1420')).toBeInTheDocument(); // Followers count
-        expect(screen.getByText('12')).toBeInTheDocument();   // Following count
-        expect(screen.getByText('55')).toBeInTheDocument();   // Posts count
+        await waitFor(() => {
+            expect(screen.getByText('3')).toBeInTheDocument();
+            expect(screen.getByText('1')).toBeInTheDocument();
+            expect(screen.getByText('2')).toBeInTheDocument();
+        });
         
-        // Verify bio
-        expect(screen.getByText('Decentralized web enthusiast.')).toBeInTheDocument();
+        // Use getAllByText for bio because it appears in both view and edit modes
+        const bioElements = screen.getAllByText('Decentralized web enthusiast.');
+        expect(bioElements.length).toBeGreaterThan(0);
     });
 });

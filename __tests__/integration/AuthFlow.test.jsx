@@ -4,7 +4,28 @@ import '@testing-library/jest-dom';
 import LoginPage from '../../components/pages/LoginPage';
 import { authApi, userApi } from '@/lib/api';
 
-jest.mock('@/lib/api');
+jest.mock('@/lib/api', () => ({
+    authApi: {
+        login: jest.fn(),
+        getChallenge: jest.fn(),
+        verifyChallenge: jest.fn(),
+    },
+    userApi: {
+        getCurrentUser: jest.fn(),
+        updateEncryptionKey: jest.fn(() => Promise.resolve()),
+    },
+    getCurrentInstance: jest.fn(() => ({ domain: 'splitter-1' })),
+    setApiBase: jest.fn(),
+}));
+
+jest.mock('@/lib/crypto', () => ({
+    getStoredKeyPair: jest.fn(() => Promise.resolve(null)),
+    ensureEncryptionKeys: jest.fn(() => Promise.resolve({ encryptionPublicKeyBase64: 'key123' })),
+}));
+
+jest.mock('@/components/ui/theme-provider', () => ({
+    useTheme: () => ({ theme: 'dark', toggleTheme: jest.fn() }),
+}));
 
 describe('Integration: Authentication Flow', () => {
     test('1️⃣ Simulates complete login integration with API and State', async () => {

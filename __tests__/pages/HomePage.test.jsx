@@ -2,7 +2,6 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import HomePage from '../../components/pages/HomePage';
-import { userApi } from '@/lib/api';
 
 // Mocking the API calls used in HomePage
 jest.mock('@/lib/api', () => ({
@@ -10,25 +9,45 @@ jest.mock('@/lib/api', () => ({
         getCurrentUser: jest.fn()
     },
     postApi: {
-        getHomeFeed: jest.fn()
-    }
+        getHomeFeed: jest.fn(() => Promise.resolve([]))
+    },
+    interactionApi: {
+        getNotifications: jest.fn(() => Promise.resolve({ notifications: [] }))
+    },
+    adminApi: {},
+    searchApi: {},
+    messageApi: {},
+    federationApi: {},
+    hashtagApi: {},
+    getCurrentInstance: jest.fn(() => ({ url: 'http://localhost:3000', domain: 'splitter-1' }))
+}));
+
+jest.mock('@/components/ui/theme-provider', () => ({
+    useTheme: () => ({ theme: 'dark', toggleTheme: jest.fn() })
 }));
 
 describe('HomePage Feed Architecture', () => {
-    beforeEach(() => {
-        // Mocking user profile API to simulate log in
-        userApi.getCurrentUser.mockResolvedValue({ username: 'testuser', display_name: 'Test User' });
-    });
-
     test('1️⃣ Renders 3-Column Layout Containers', async () => {
-        render(<HomePage onNavigate={jest.fn()} />);
+        const mockUserData = { 
+            id: '1', 
+            username: 'testuser', 
+            avatar: '👩', 
+            displayName: 'Test User',
+            did: 'did:key:test'
+        };
+        
+        render(
+            <HomePage 
+                onNavigate={jest.fn()} 
+                userData={mockUserData} 
+                updateUserData={jest.fn()}
+                handleLogout={jest.fn()}
+            />
+        );
         
         // Wait for basic elements to load
-        // This assumes standard text like "Home", "Trending", or a composer placeholder
+        // This assumes standard text like "Home"
         const homeText = await screen.findAllByText(/Home/i);
         expect(homeText.length).toBeGreaterThan(0);
-        
-        // In a real scenario, you can check for the composer input or trending section
-        // expect(screen.getByText(/Trending/i)).toBeInTheDocument();
     });
 });
