@@ -848,8 +848,6 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
               onFocus={() => searchQuery.length >= 2 && setShowSearchResults(true)}
               className="nav-search"
               style={{
-                minWidth: showSearchResults ? '400px' : '300px',
-                width: showSearchResults ? '450px' : '300px',
                 transition: 'all 0.3s ease'
               }}
             />
@@ -1945,6 +1943,31 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
           </div>
         </div>
       )}
+
+      {/* Mobile Bottom Navigation */}
+      <nav className="mobile-bottom-nav">
+        <button className={`mobile-nav-btn ${activeTab === 'home' ? 'active' : ''}`} onClick={() => setActiveTab('home')}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{width:'22px',height:'22px'}}><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+          <span>Home</span>
+        </button>
+        <button className={`mobile-nav-btn ${activeTab === 'local' ? 'active' : ''}`} onClick={() => setActiveTab('local')}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{width:'22px',height:'22px'}}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+          <span>Local</span>
+        </button>
+        <button className={`mobile-nav-btn ${activeTab === 'federated' ? 'active' : ''}`} onClick={() => setActiveTab('federated')}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{width:'22px',height:'22px'}}><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+          <span>Global</span>
+        </button>
+        <button className="mobile-nav-btn" onClick={() => onNavigate('dm')}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{width:'22px',height:'22px'}}><path d="M21 15a4 4 0 01-4 4H8l-5 3V7a4 4 0 014-4h10a4 4 0 014 4z"/></svg>
+          <span>Messages</span>
+          {hasUnreadMessages && <span className="mobile-nav-unread" />}
+        </button>
+        <button className="mobile-nav-btn" onClick={() => onNavigate('profile')}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{width:'22px',height:'22px'}}><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <span>Profile</span>
+        </button>
+      </nav>
     </div>
   );
 }
