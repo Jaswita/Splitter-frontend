@@ -131,17 +131,25 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
   };
 
   const dedupePosts = (list) => {
-    const seenById = new Set();
-    const seenByContent = new Set();
-    return (list || []).filter((post, index) => {
-      // Primary dedup: by post ID (catches exact same row)
-      const idKey = `${post.id || 'id'}-${post.authorId || post.author_did || post.author || 'author'}-${post.createdAt || post.created_at || index}`;
-      if (seenById.has(idKey)) return false;
-      seenById.add(idKey);
-      // Secondary dedup: content fingerprint (catches local + cached-remote copies of same post)
-      const contentKey = `${(post.content || '').trim().substring(0, 200)}||${post.displayName || post.author || ''}||${post.createdAt || post.created_at || ''}`;
-      if (seenByContent.has(contentKey)) return false;
-      seenByContent.add(contentKey);
+    if (!list || list.length === 0) return [];
+    // Build a content fingerprint map; when both local and remote copies exist, keep the local one
+    const contentMap = new Map(); // contentKey -> post
+    for (const post of list) {
+      const contentKey = `${(post.content || '').trim().substring(0, 200)}||${(post.displayName || post.author || '').toLowerCase()}||${post.createdAt || ''}`;
+      const existing = contentMap.get(contentKey);
+      if (!existing) {
+        contentMap.set(contentKey, post);
+      } else if (existing.isRemote && !post.isRemote) {
+        // Prefer local copy over remote copy
+        contentMap.set(contentKey, post);
+      }
+      // If existing is local and new is remote, skip the remote copy
+    }
+    // Also dedup by exact ID
+    const seenIds = new Set();
+    return Array.from(contentMap.values()).filter(post => {
+      if (seenIds.has(post.id)) return false;
+      seenIds.add(post.id);
       return true;
     });
   };
@@ -588,8 +596,11 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
         const currentDomain = instanceInfo.domain;
         let filteredPosts = dedupePosts(transformedPosts);
 
-        if (activeTab === 'local') {
-          filteredPosts = filteredPosts.filter((item) => !item.isRemote && (item.domain === currentDomain || item.domain === 'localhost'));
+        if (activeTab === 'home') {
+          // Home tab: only local posts from this server (no remote/cached copies)
+          filteredPosts = filteredPosts.filter((item) => !item.isRemote);
+        } else if (activeTab === 'local') {
+          filteredPosts = filteredPosts.filter((item) => !item.isRemote);
         } else if (activeTab === 'federated') {
           filteredPosts = filteredPosts.filter((item) => item.isRemote);
         }
@@ -1535,11 +1546,11 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
                         <strong className="post-display-name">{post.displayName}</strong>
                       </div>
                       <div className="post-meta-line">
-                        <span className="post-handle">{post.handle}{post.showDomain ? `@${post.domain}` : ''}</span>
+                        <span className="post-handle">{post.handle}{post.isRemote ? `@${post.domain}` : ''}</span>
                         <span className="post-meta-dot">·</span>
                         <span className="post-time">{post.timestamp}</span>
-                        {!post.showDomain && <><span className="post-meta-dot">·</span><span className="post-badge local" title="This post is from your local instance">Local</span></>}
-                        {post.showDomain && <><span className="post-meta-dot">·</span><span className="post-badge remote" title={`This post is from ${post.domain || 'a remote instance'}`}>{post.domain || 'Remote'}</span></>}
+                        {!post.isRemote && <><span className="post-meta-dot">·</span><span className="post-badge local" title="This post is from your local instance">Local</span></>}
+                        {post.isRemote && <><span className="post-meta-dot">·</span><span className="post-badge remote" title={`This post is from ${post.domain || 'a remote instance'}`}>{post.domain || 'Remote'}</span></>}
                         {isEdited(post) && (
                           <><span className="post-meta-dot">·</span><span
                             className="post-badge"
