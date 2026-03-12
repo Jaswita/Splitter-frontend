@@ -144,15 +144,34 @@ export default function ProfilePage({ onNavigate, userData, updateUserData, view
 
         // Fetch post count (get user's posts)
         try {
-          const targetDid = viewingUserId ? profile?.did : hasExternalProfile ? viewingRemoteUser?.did : userData?.did;
+          const targetDid = viewingUserId ? profile?.did
+            : hasExternalProfile ? (viewingRemoteUser?.did || viewingRemoteUser?.actor_uri)
+            : userData?.did;
+          let posts = [];
           if (targetDid) {
-            const posts = await postApi.getUserPosts(targetDid);
-            setStats(prev => ({
-              ...prev,
-              posts: (posts || []).length,
-            }));
-            setUserPosts(posts || []);
+            posts = await postApi.getUserPosts(targetDid) || [];
           }
+          // For remote users, also check federated timeline if local query returned nothing
+          if (hasExternalProfile && posts.length === 0) {
+            try {
+              const remote = viewingRemoteUser;
+              const fedResult = await federationApi.getTimeline(100);
+              const handle = `${remote.username}@${remote.domain || remote.instance_domain || ''}`.toLowerCase();
+              posts = (fedResult.posts || []).filter(p => {
+                if (!p.is_remote) return false;
+                const uname = p.username || p.author_username || '';
+                const dom = p.domain || p.instance_domain || '';
+                return `${uname}@${dom}`.toLowerCase() === handle;
+              });
+            } catch (fedErr) {
+              console.log('Remote user posts federation fallback failed:', fedErr);
+            }
+          }
+          setStats(prev => ({
+            ...prev,
+            posts: posts.length,
+          }));
+          setUserPosts(posts);
         } catch (err) {
           console.error('Failed to fetch user posts:', err);
         }

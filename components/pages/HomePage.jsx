@@ -487,61 +487,41 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
       const token = typeof window !== 'undefined' ? localStorage.getItem('jwt_token') : null;
 
       if (activeTab === 'home') {
-        // Home tab: same structure as local/federated but filtered to followed users + own posts
-        // Fetch all public posts (same source as other tabs)
-        feedPosts = await postApi.getPublicFeed(50, 0, false);
-
-        // Build the set of followed user IDs and username@domain keys
-        // (reuse the followingUsers state that was already loaded on mount)
-        let followSet = followingUsers;
-        if ((!followSet || followSet.size === 0) && userData?.id && token) {
+        // Home tab: use authenticated feed endpoint (backend JOINs on follows table)
+        if (token) {
           try {
-            const following = await followApi.getFollowing(userData.id, 200, 0);
-            followSet = new Set();
-            (following || []).forEach(u => {
-              if (u.id) followSet.add(u.id);
-              if (u.username && u.instance_domain) {
-                followSet.add(`${u.username}@${u.instance_domain}`.toLowerCase());
+            feedPosts = await postApi.getFeed(20, 0);
+
+            // Also merge remote followed user posts from federated timeline
+            try {
+              const following = await followApi.getFollowing(userData?.id, 200, 0);
+              const followedHandles = new Set(
+                (following || [])
+                  .filter(u => {
+                    const domain = u.instance_domain || u.domain || '';
+                    return domain && domain !== 'localhost' && domain !== getCurrentInstance().domain;
+                  })
+                  .map(u => `${u.username}@${u.instance_domain || u.domain}`.toLowerCase())
+              );
+
+              if (followedHandles.size > 0) {
+                const fedResult = await federationApi.getTimeline(100);
+                const followedRemotePosts = (fedResult.posts || []).filter(p => {
+                  if (!p.is_remote) return false;
+                  const identity = parseRemoteIdentity(p, getCurrentInstance().domain);
+                  const handle = `${identity.username || p.username || ''}@${identity.domain || p.domain || ''}`.toLowerCase();
+                  return followedHandles.has(handle);
+                });
+                feedPosts = [...(feedPosts || []), ...followedRemotePosts];
               }
-            });
-          } catch (e) {
-            console.log('Could not load following list:', e);
-            followSet = new Set();
-          }
-        }
-
-        if (token && followSet && followSet.size > 0) {
-          // Filter to only posts by people we follow OR our own posts
-          feedPosts = (feedPosts || []).filter(p => {
-            // Own posts always pass
-            if (p.author_id === userData?.id || p.user_id === userData?.id || p.author_did === userData?.did) return true;
-            // Check by author ID
-            if (p.author_id && followSet.has(p.author_id)) return true;
-            if (p.user_id && followSet.has(p.user_id)) return true;
-            // Check by username@domain for remote users
-            const uname = p.author_username || p.username || '';
-            const domain = p.instance_domain || p.author_instance_domain || '';
-            if (uname && domain) {
-              if (followSet.has(`${uname}@${domain}`.toLowerCase())) return true;
+            } catch (mergeErr) {
+              console.log('Followed remote merge skipped:', mergeErr);
             }
-            return false;
-          });
-        }
-
-        // Also merge followed remote posts from federated timeline
-        if (token && followSet && followSet.size > 0) {
-          try {
-            const fedResult = await federationApi.getTimeline(80);
-            const followedRemote = (fedResult.posts || []).filter(p => {
-              if (!p.is_remote) return false;
-              const identity = parseRemoteIdentity(p, getCurrentInstance().domain);
-              const handle = `${identity.username || p.username || ''}@${identity.domain || p.domain || ''}`.toLowerCase();
-              return followSet.has(handle);
-            });
-            feedPosts = [...(feedPosts || []), ...followedRemote];
-          } catch (mergeErr) {
-            console.log('Followed remote merge skipped:', mergeErr);
+          } catch (authErr) {
+            feedPosts = await postApi.getPublicFeed(20, 0, false);
           }
+        } else {
+          feedPosts = await postApi.getPublicFeed(20, 0, false);
         }
       } else if (activeTab === 'local') {
         // Local tab: local_only = true

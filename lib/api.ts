@@ -414,7 +414,7 @@ export const postApi = {
 
   async getUserPosts(userId: string, limit = 20, offset = 0) {
     const response = await fetch(
-      `${apiBase()}/posts/user/${userId}?limit=${limit}&offset=${offset}`
+      `${apiBase()}/posts/user/${encodeURIComponent(userId)}?limit=${limit}&offset=${offset}`
     );
     return handleResponse<any[]>(response);
   },
