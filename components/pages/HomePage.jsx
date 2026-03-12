@@ -131,11 +131,17 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
   };
 
   const dedupePosts = (list) => {
-    const seen = new Set();
+    const seenById = new Set();
+    const seenByContent = new Set();
     return (list || []).filter((post, index) => {
-      const identity = `${post.id || 'id'}-${post.authorId || post.author_did || post.author || 'author'}-${post.createdAt || post.created_at || index}`;
-      if (seen.has(identity)) return false;
-      seen.add(identity);
+      // Primary dedup: by post ID (catches exact same row)
+      const idKey = `${post.id || 'id'}-${post.authorId || post.author_did || post.author || 'author'}-${post.createdAt || post.created_at || index}`;
+      if (seenById.has(idKey)) return false;
+      seenById.add(idKey);
+      // Secondary dedup: content fingerprint (catches local + cached-remote copies of same post)
+      const contentKey = `${(post.content || '').trim().substring(0, 200)}||${post.displayName || post.author || ''}||${post.createdAt || post.created_at || ''}`;
+      if (seenByContent.has(contentKey)) return false;
+      seenByContent.add(contentKey);
       return true;
     });
   };
@@ -217,7 +223,6 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
       if (!userData?.id) return;
 
       try {
-        const { followApi } = await import('@/lib/api');
         const following = await followApi.getFollowing(userData.id);
 
         // Create a Set of user IDs and username@domain keys for following
@@ -427,8 +432,6 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
     setFollowLoading(prev => new Set(prev).add(userId));
 
     try {
-      const { followApi } = await import('@/lib/api');
-
       if (isFollowing) {
         console.log('Unfollowing user:', userId);
         await followApi.unfollowUser(userId);
@@ -454,6 +457,8 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
         });
       }
       console.log('Follow operation successful');
+      // Refresh feed so newly followed user's posts appear in Home tab
+      fetchPosts();
     } catch (err) {
       console.error('Follow operation failed:', err);
       alert(`Failed to ${isFollowing ? 'unfollow' : 'follow'} user: ${err.message}`);
@@ -1533,8 +1538,8 @@ export default function HomePage({ onNavigate, userData, updateUserData, handleL
                         <span className="post-handle">{post.handle}{post.showDomain ? `@${post.domain}` : ''}</span>
                         <span className="post-meta-dot">·</span>
                         <span className="post-time">{post.timestamp}</span>
-                        {!post.isRemote && <><span className="post-meta-dot">·</span><span className="post-badge local" title="This post is from your local instance">Local</span></>}
-                        {post.isRemote && <><span className="post-meta-dot">·</span><span className="post-badge remote" title={`This post is from ${post.domain || 'a remote instance'}`}>{post.domain || 'Remote'}</span></>}
+                        {!post.showDomain && <><span className="post-meta-dot">·</span><span className="post-badge local" title="This post is from your local instance">Local</span></>}
+                        {post.showDomain && <><span className="post-meta-dot">·</span><span className="post-badge remote" title={`This post is from ${post.domain || 'a remote instance'}`}>{post.domain || 'Remote'}</span></>}
                         {isEdited(post) && (
                           <><span className="post-meta-dot">·</span><span
                             className="post-badge"
